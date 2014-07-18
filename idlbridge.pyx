@@ -25,6 +25,7 @@ class IDLTypeError(Exception):
 
     pass
 
+
 # global variables used to track the usage of the IDL library
 __references__ = 0
 __shutdown__ = False
@@ -85,21 +86,6 @@ cdef _deregister():
         _cleanup_idl()
 
 
-cdef class _IDLCallable:
-
-    pass
-
-
-cdef class IDLFunction(_IDLCallable):
-
-    pass
-
-
-cdef class IDLProcedure(_IDLCallable):
-
-    pass
-
-
 cdef class IDLBridge:
     """
 
@@ -132,13 +118,129 @@ cdef class IDLBridge:
 
         pass
 
-    def export_function(self, name):
+    cpdef object export_function(self, unicode name):
 
         return IDLFunction(name, idl_bridge=self)
 
-    def export_procedure(self, name):
+    cpdef object export_procedure(self, unicode name):
 
         return IDLProcedure(name, idl_bridge=self)
+
+
+class _IDLCallable:
+
+    def __init__(self, name, idl_bridge=IDLBridge()):
+
+        self.name = name
+        self._idl = idl_bridge
+        self._id = idl_bridge._id
+
+    def _process_arguments(self, arguments, temporary_variables):
+
+        # parse arguments
+        argument_variables = []
+        for index, argument in enumerate(arguments):
+
+            # transfer argument to idl
+            tempvar = "_idlbridge_arg{index}".format(index=index)
+            self._idl.put(tempvar, argument)
+
+            # record temporary variable for later cleanup
+            argument_variables.append(tempvar)
+
+        # add argument temporaries to list of temporary variables
+        temporary_variables += argument_variables
+
+        # build and return argument command string fragment
+        return ", ".join(argument_variables)
+
+    def _process_keywords(self, keywords, temporary_variables):
+
+        keyword_strings = []
+        for index, (key, argument) in enumerate(keywords.items()):
+
+            # transfer argument
+            tempvar = "idlbridge_kw{index}".format(index=index)
+            self._idl.put(tempvar, argument)
+
+            # generate key string for command
+            keyword_strings.append("{key}={var}".format(key=key, var=tempvar))
+
+            # record variable for later cleanup
+            temporary_variables.append(tempvar)
+
+        # build and return keyword command string fragment
+        return ", ".join(keyword_strings)
+
+
+class IDLFunction(_IDLCallable):
+
+    def __call__(self, *arguments, **keywords):
+
+        temporary_variables = []
+
+        # pass arguments to idl and assemble the relevant command string fragments
+        argument_fragment = self._process_arguments(arguments, temporary_variables)
+        keyword_fragment = self._process_keywords(keywords, temporary_variables)
+
+        # assemble command string
+        return_variable = "_idlbridge_return".format(id=self._id)
+        command = "{rtnvar} = {name}({arg}".format(rtnvar=return_variable, name=self.name, arg=argument_fragment)
+
+        if argument_fragment and keyword_fragment:
+
+            # need an extra comma to separate arguments from keywords
+            command += ", "
+
+        command += "{key})".format(key=keyword_fragment)
+
+        # execute command and obtain returned data
+        self._idl.execute(command)
+        data = self._idl.get(return_variable)
+
+        # clean up
+        for variable in temporary_variables:
+
+            self._idl.delete(variable)
+
+        self._idl.delete(return_variable)
+
+        return data
+
+
+class IDLProcedure(_IDLCallable):
+
+    def __call__(self, *arguments, **keywords):
+
+        temporary_variables = []
+
+        # pass arguments to idl and assemble the relevant command string fragments
+        argument_fragment = self._process_arguments(arguments, temporary_variables)
+        keyword_fragment = self._process_keywords(keywords, temporary_variables)
+
+        # assemble command string
+        if argument_fragment or keyword_fragment:
+
+            command = "{name}, {arg}".format(name=self.name, arg=argument_fragment)
+
+            if argument_fragment and keyword_fragment:
+
+                # need an extra comma to separate arguments from keywords
+                command += ", "
+
+            command += keyword_fragment
+
+        else:
+
+            command = self.name
+
+        # execute command
+        self._idl.execute(command)
+
+        # clean up
+        for variable in temporary_variables:
+
+            self._idl.delete(variable)
 
 
 # module level bridge and functions
