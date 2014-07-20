@@ -1,5 +1,7 @@
 # TODO: add license
 
+from numpy cimport ndarray
+
 # include IDL callable interface
 include "idl_export.pxi"
 
@@ -15,15 +17,27 @@ class IDLLibraryError(Exception):
     pass
 
 
-class IDLTypeError(Exception):
+class IDLTypeError(TypeError):
     """
     An IDL Type Error Exception.
 
-    This exception is thrown when a data type is to the IDL library that it is
-    unable to handle.
+    This exception is thrown when a data type is passed to the IDL library that
+    it is unable to handle.
     """
 
     pass
+
+
+class IDLValueError(ValueError):
+    """
+    An IDL Value Error Exception.
+
+    This exception is thrown when a value is passed to the IDL library that it
+    isunable to handle.
+    """
+
+    pass
+
 
 
 # global variables used to track the usage of the IDL library
@@ -101,28 +115,138 @@ cdef class IDLBridge:
         # de-register this bridge with the IDL library
         _deregister()
 
-    cpdef object execute(self, unicode command):
+    cpdef object execute(self, str command):
 
         byte_string = command.encode("UTF8")
         IDL_ExecuteStr(byte_string)
 
-    cpdef object get(self, unicode variable):
+    cpdef object get(self, str variable):
 
-        return None
+        cdef IDL_VPTR vptr
 
-    cpdef object put(self, unicode variable, object data):
+        # convert unicode string to c compatible byte string
+        byte_string = variable.encode("UTF8")
+
+        # request variable from IDL
+        vptr = IDL_FindNamedVariable(byte_string, False)
+
+        if vptr == NULL or vptr.type == IDL_TYP_UNDEF:
+
+            raise IDLValueError("Variable {} not found.".format(variable.upper()))
+
+        # identify variable type and translate to python
+        if vptr.flags & IDL_V_ARR:
+
+            if vptr.flags & IDL_V_STRUCT:
+
+                return self._get_structure(vptr)
+
+            else:
+
+                return self._get_array(vptr)
+
+        elif vptr.type == IDL_TYP_BYTE:
+
+            return vptr.value.c
+
+        elif vptr.type == IDL_TYP_INT:
+
+            return vptr.value.i
+
+        elif vptr.type == IDL_TYP_UINT:
+
+            return vptr.value.ui
+
+        elif vptr.type == IDL_TYP_LONG:
+
+            return vptr.value.l
+
+        elif vptr.type == IDL_TYP_ULONG:
+
+            return vptr.value.ul
+
+        elif vptr.type == IDL_TYP_LONG64:
+
+            return vptr.value.l64
+
+        elif vptr.type ==  IDL_TYP_ULONG64:
+
+            return vptr.value.ul64
+
+        elif vptr.type == IDL_TYP_FLOAT:
+
+            return vptr.value.f
+
+        elif vptr.type == IDL_TYP_DOUBLE:
+
+            return vptr.value.d
+
+        elif vptr.type == IDL_TYP_COMPLEX:
+
+            return complex(vptr.value.cmp.r, vptr.value.cmp.i)
+
+        elif vptr.type == IDL_TYP_DCOMPLEX:
+
+            return complex(vptr.value.dcmp.r, vptr.value.dcmp.i)
+
+        elif vptr.type == IDL_TYP_STRING:
+
+            return self._get_string(vptr)
+
+        elif vptr.type == IDL_TYP_PTR:
+
+            raise NotImplementedError("Pointer types are not supported.")
+
+        elif vptr.type == IDL_TYP_OBJREF:
+
+            raise NotImplementedError("Object types are not supported.")
+
+        else:
+
+            raise IDLTypeError("Unrecognised IDL type.")
+
+    cdef inline ndarray _get_array(self, IDL_VPTR vptr):
+
+        # TODO: implement me
+        raise NotImplementedError("Not currently implemented.")
+
+    cdef inline dict _get_structure(self, IDL_VPTR vptr):
+
+        raise NotImplementedError("Not currently implemented.")
+
+    cdef inline str _get_string(self, IDL_VPTR vptr):
+
+        # The string pointer in the IDL string structure is invalid when the string length is zero.
+        if vptr.value.str.slen == 0:
+
+            return ""
+
+        else:
+
+            return vptr.value.str.s.decode("UTF8")
+
+    cpdef object put(self, str variable, object data):
 
         pass
 
-    cpdef object delete( self, unicode variable):
+    cpdef object delete(self, str variable):
 
-        pass
+        cdef IDL_VPTR vptr
 
-    cpdef object export_function(self, unicode name):
+        byte_string = variable.encode("UTF8")
+        vptr = IDL_FindNamedVariable(byte_string, False)
+
+        if vptr == NULL or vptr.type == IDL_TYP_UNDEF:
+
+            raise IDLValueError("Variable {} not found.".format(variable.upper()))
+
+        IDL_Delvar(vptr)
+
+    cpdef object export_function(self, str name):
 
         return IDLFunction(name, idl_bridge=self)
 
-    cpdef object export_procedure(self, unicode name):
+    cpdef object export_procedure(self, str name):
 
         return IDLProcedure(name, idl_bridge=self)
 
@@ -244,37 +368,37 @@ class IDLProcedure(_IDLCallable):
 
 
 # module level bridge and functions
-cdef IDLBridge __module_bridge__ = IDLBridge()
+cdef IDLBridge __bridge__ = IDLBridge()
 
-def execute(commands):
+def execute(command):
 
-    global __module_bridge__
-    __module_bridge__.execute(commands)
+    global __bridge__
+    __bridge__.execute(command)
 
 def get(variable):
 
-    global __module_bridge__
-    return __module_bridge__.get(variable)
+    global __bridge__
+    return __bridge__.get(variable)
 
 def put(variable, data):
 
-    global __module_bridge__
-    __module_bridge__.put(variable, data)
+    global __bridge__
+    __bridge__.put(variable, data)
 
 def delete(variable):
 
-    global __module_bridge__
-    __module_bridge__.delete(variable)
+    global __bridge__
+    __bridge__.delete(variable)
 
 def export_function(name):
 
-    global __module_bridge__
-    return __module_bridge__.export_function(name)
+    global __bridge__
+    return __bridge__.export_function(name)
 
 def export_procedure(name):
 
-    global __module_bridge__
-    return __module_bridge__.export_procedure(name)
+    global __bridge__
+    return __bridge__.export_procedure(name)
 
 
 

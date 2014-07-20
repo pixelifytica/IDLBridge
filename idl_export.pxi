@@ -9,7 +9,9 @@ cdef extern from "idl_export.h":
 
     IF UNAME_MACHINE == "i686" or UNAME_MACHINE == "x86":
 
-        # IDL data types - 32bit systems (x86)
+        # 32bit systems (x86)
+
+        # IDL data types
         ctypedef short IDL_INT
         ctypedef unsigned short IDL_UINT
         ctypedef long IDL_LONG
@@ -17,15 +19,25 @@ cdef extern from "idl_export.h":
         ctypedef long long IDL_LONG64
         ctypedef unsigned long long IDL_ULONG64
 
+        # IDL pointer types
+        ctypedef IDL_LONG IDL_MEMINT
+        ctypedef IDL_ULONG IDL_UMEMINT
+
     ELSE:
 
-        # IDL data types - 64bit systems (x86_64)
+        # 64bit systems (x86_64)
+
+        # IDL data types
         ctypedef short IDL_INT
         ctypedef unsigned short IDL_UINT
         ctypedef int IDL_LONG
         ctypedef unsigned int IDL_ULONG
         ctypedef long long IDL_LONG64
         ctypedef unsigned long long IDL_ULONG64
+
+        # IDL pointer types
+        ctypedef IDL_LONG64 IDL_MEMINT
+        ctypedef IDL_ULONG64 IDL_UMEMINT
 
     # IDL_VARIABLE type values
     DEF IDL_TYP_UNDEF = 0
@@ -58,7 +70,7 @@ cdef extern from "idl_export.h":
     DEF IDL_INIT_QUIET = 64
     DEF IDL_INIT_NOCMDLINE = (1 << 12)
 
-    # data structures
+    # initialisation data structures
     ctypedef int IDL_INIT_DATA_OPTIONS_T
 
     ctypedef struct IDL_CLARGS:
@@ -72,6 +84,89 @@ cdef extern from "idl_export.h":
         IDL_CLARGS clargs
         void *hwnd
 
+    # complex type structures
+    ctypedef struct IDL_COMPLEX:
+
+        float r, i
+
+    ctypedef struct IDL_DCOMPLEX:
+
+        double r, i
+
+    # array structures
+    DEF IDL_MAX_ARRAY_DIM = 8
+
+    ctypedef IDL_MEMINT IDL_ARRAY_DIM[IDL_MAX_ARRAY_DIM]
+
+    ctypedef struct IDL_ARRAY:
+
+        IDL_MEMINT elt_len          # Length of element in char units
+        IDL_MEMINT arr_len          # Length of entire array (char)
+        IDL_MEMINT n_elts           # total # of elements
+        UCHAR *data                 # ^ to beginning of array data
+        UCHAR n_dim                 # # of dimensions used by array
+        UCHAR flags                 # Array block flags
+        short file_unit             # # of assoc file if file var
+        IDL_ARRAY_DIM dim           # dimensions
+        # IDL_ARRAY_FREE_CB free_cb 	# Free callback
+        # IDL_FILEINT offset		    # Offset to base of data for file var
+        # IDL_MEMINT data_guard 	    # Guard longword
+
+    # structure type
+    ctypedef struct _idl_structure:
+
+        int ntags
+
+    ctypedef _idl_structure *IDL_StructDefPtr
+
+    ctypedef struct IDL_SREF:
+
+        IDL_ARRAY *arr              # pointer to array block containing data
+        _idl_structure *sdef        # pointer to structure definition
+
+    # string type
+    ctypedef int IDL_STRING_SLEN_T
+
+    DEF IDL_STRING_MAX_SLEN = 2147483647
+
+    ctypedef struct IDL_STRING:
+
+        IDL_STRING_SLEN_T slen
+        short stype
+        char *s
+
+    # variable structures
+    ctypedef union IDL_ALLTYPES:
+
+        UCHAR c
+        IDL_INT i
+        IDL_UINT ui
+        IDL_LONG l
+        IDL_ULONG ul
+        IDL_LONG64 l64
+        IDL_ULONG64 ul64
+        float f
+        double d
+        IDL_COMPLEX cmp
+        IDL_DCOMPLEX dcmp
+        IDL_STRING str
+        IDL_ARRAY *arr
+        IDL_SREF s
+        #IDL_HVID hvid
+        IDL_MEMINT memint
+        #IDL_FILEINT fileint
+        #IDL_PTRINT ptrint
+
+    # IDL_VARIABLE definition
+    ctypedef struct IDL_VARIABLE:
+
+        UCHAR type
+        UCHAR flags
+        UCHAR flags2
+        IDL_ALLTYPES value
+
+    ctypedef IDL_VARIABLE *IDL_VPTR
+
     # functions
     int IDL_Initialize(IDL_INIT_DATA *init_data) nogil
 
@@ -79,63 +174,13 @@ cdef extern from "idl_export.h":
 
     int IDL_ExecuteStr(char *cmd) nogil
 
+    IDL_VPTR IDL_FindNamedVariable(char *name, int ienter) nogil
+
+    void IDL_Delvar(IDL_VPTR var) nogil
 
 
-    # STUFF FOR REFERENCE
-
-    # Array definitions
-
-    # Maximum # of array dimensions
-    # DEF IDL_MAX_ARRAY_DIM = 8
-
-    # ctypedef int IDL_ARRAY_DIM[IDL_MAX_ARRAY_DIM]
-    # ctypedef struct IDL_ARRAY:
-    #     int elt_len                 # Length of element in char units
-    #     int arr_len		            # Length of entire array (char)
-    #     int n_elts		            # total # of elements
-    #     char *data			        # ^ to beginning of array data
-    #     char n_dim			        # # of dimensions used by array
-    #     char flags			        # Array block flags
-    #     short file_unit		        # # of assoc file if file var
-    #     IDL_ARRAY_DIM dim		    # dimensions
-    #     #IDL_ARRAY_FREE_CB free_cb	# Free callback
-    #     #IDL_FILEINT offset		    # Offset to base of data for file var
-    #     #IDL_MEMINT data_guard	    # Guard longword
-
-    # String definitions
-    # ctypedef struct IDL_STRING:
-    #     int slen
-    #     char *s
-
-    # Structure definitions
-    # ctypedef struct _idl_structure:
-    #     int ntags
-
-    # ctypedef _idl_structure *IDL_StructDefPtr
-
-    # ctypedef struct IDL_SREF:
-    #     IDL_ARRAY *arr
-    #     _idl_structure *sdef
 
     # int IDL_StructNumTags(IDL_StructDefPtr sdef)
-
-    # ctypedef union IDL_ALLTYPES:
-    #     UCHAR c
-    #     IDL_INT i
-    #     IDL_LONG l
-    #     float f
-    #     double d
-    #
-    #     IDL_STRING str
-    #     IDL_ARRAY *arr
-    #     IDL_SREF s
-
-    # ctypedef struct IDL_VARIABLE:
-    #     char type
-    #     char flags
-    #     IDL_ALLTYPES value
-
-    # ctypedef IDL_VARIABLE *IDL_VPTR
 
     # int IDL_Initialize(IDL_INIT_DATA *init_data)
     #
