@@ -59,7 +59,7 @@ cdef extern from "idl_export.h":
 
     # IDL_VARIABLE flags
     DEF IDL_V_CONST = 1
-    DEF DL_V_CONST = 2
+    DEF IDL_V_CONST = 2
     DEF IDL_V_ARR = 4
     DEF IDL_V_FILE = 8
     DEF IDL_V_DYNAMIC = 16

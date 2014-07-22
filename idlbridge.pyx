@@ -218,30 +218,34 @@ cdef class IDLBridge:
         """
 
         cdef:
+            IDL_ARRAY *idl_array
             IDL_STRING idl_string
             list strings
             int index
             np.ndarray array
             np.PyArray_Dims new_dimensions
 
-        # The idl string array is unpacked to form a flat list of strings, this is then
+        # obtain IDL array structure from IDL variable
+        idl_array = vptr.value.arr
+
+        # The IDL string array is unpacked to form a flat list of strings, this is then
         # converted to a numpy array before finally being reshaped to the correct dimensions.
 
         # convert all the IDL strings in the array to python strings
         strings = []
-        for index in range(vptr.value.arr.n_elts):
+        for index in range(idl_array.n_elts):
 
             # dereference idl string pointer
-            idl_string = (<IDL_STRING *> (vptr.value.arr.data + index * vptr.value.arr.elt_len))[0]
+            idl_string = (<IDL_STRING *> (idl_array.data + index * idl_array.elt_len))[0]
             strings.append(self._string_idl_to_py(idl_string))
 
         # convert to a flat numpy array
-        array = np.array(strings)
+        numpy_array = np.array(strings)
 
         # reshape array
-        new_dimensions.len = vptr.value.arr.n_dim
-        new_dimensions.ptr = self._dimensions_idl_to_numpy(vptr.value.arr.n_dim, vptr.value.arr.dim)
-        return np.PyArray_Newshape(array, &new_dimensions, np.NPY_CORDER)
+        new_dimensions.len = idl_array.n_dim
+        new_dimensions.ptr = self._dimensions_idl_to_numpy(idl_array.n_dim, idl_array.dim)
+        return np.PyArray_Newshape(numpy_array, &new_dimensions, np.NPY_CORDER)
 
     cdef inline np.ndarray _get_array_structure(self, IDL_VPTR vptr):
         """
@@ -262,22 +266,26 @@ cdef class IDLBridge:
         """
 
         cdef:
+            IDL_ARRAY *idl_array
             int num_dimensions
             np.npy_intp dimensions[IDL_MAX_ARRAY_DIM]
-            np.ndarray array
+            np.ndarray numpy_array
             int index
+
+        # obtain IDL array structure from IDL variable
+        idl_array = vptr.value.arr
 
         # obtain numpy data type
         numpy_type = self._type_idl_to_numpy(vptr.type)
 
         # IDL defines its dimensions in the opposite order to numpy
-        numpy_dimensions = self._dimensions_idl_to_numpy(vptr.value.arr.n_dim, vptr.value.arr.dim)
+        numpy_dimensions = self._dimensions_idl_to_numpy(idl_array.n_dim, idl_array.dim)
 
         # generate an empty numpy array and copy IDL array data
-        array = np.PyArray_SimpleNew(vptr.value.arr.n_dim, numpy_dimensions, numpy_type)
-        memcpy(array.data, <void *> vptr.value.arr.data, vptr.value.arr.arr_len)
+        numpy_array = np.PyArray_SimpleNew(idl_array.n_dim, numpy_dimensions, numpy_type)
+        memcpy(numpy_array.data, <void *> idl_array.data, idl_array.arr_len)
 
-        return array
+        return numpy_array
 
     cdef inline dict _get_structure(self, IDL_VPTR vptr):
         """
