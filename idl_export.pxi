@@ -178,7 +178,31 @@ cdef extern from "idl_export.h":
 
     void IDL_Delvar(IDL_VPTR var) nogil
 
+    IDL_VPTR IDL_Gettmp() nogil
 
+    IDL_VPTR IDL_GettmpByte(UCHAR value) nogil
+
+    IDL_VPTR IDL_GettmpInt(IDL_INT value) nogil
+
+    IDL_VPTR IDL_GettmpUInt(IDL_UINT value) nogil
+
+    IDL_VPTR IDL_GettmpLong(IDL_LONG value) nogil
+
+    IDL_VPTR IDL_GettmpULong(IDL_ULONG value) nogil
+
+    IDL_VPTR IDL_GettmpLong64(IDL_LONG64 value) nogil
+
+    IDL_VPTR IDL_GettmpULong64(IDL_ULONG64 value) nogil
+
+    IDL_VPTR IDL_GettmpFloat(float value) nogil
+
+    IDL_VPTR IDL_GettmpDouble(double value) nogil
+
+    void IDL_VarCopy(IDL_VPTR src, IDL_VPTR dst) nogil
+
+    char *IDL_VarGetString(IDL_VPTR vptr) nogil
+
+    IDL_VPTR IDL_StrToSTRING(char *s) nogil
 
     # int IDL_StructNumTags(IDL_StructDefPtr sdef)
 

@@ -298,8 +298,69 @@ cdef class IDLBridge:
         raise NotImplementedError("Not currently implemented.")
 
     cpdef object put(self, str variable, object data):
+        """
+        Sets an IDL variable with python data.
 
-        pass
+        :param variable: A string containing the variable name.
+        :param data: A pythons object containing data to send.
+        """
+
+        if isinstance(data, dict):
+
+            self._put_structure(variable, data)
+
+        elif isinstance(data, np.ndarray):
+
+            self._put_array(variable, data)
+
+        else:
+
+            self._put_scalar(variable, data)
+
+    cdef inline object _put_structure(self, str variable, object data):
+
+        raise NotImplementedError("Not currently implemented.")
+
+    cdef inline object _put_array(self, str variable, object data):
+
+        raise NotImplementedError("Not currently implemented.")
+
+    cdef inline object _put_scalar(self, str variable, object data):
+
+        cdef IDL_VPTR temp_vptr, dest_vptr
+
+        # create appropriate IDL temporary variable
+        if isinstance(data, int):
+
+            temp_vptr = IDL_GettmpLong64(<IDL_LONG64> data)
+
+        elif isinstance(data, float):
+
+            temp_vptr = IDL_GettmpFloat(<double> data)
+
+        elif isinstance(data, str):
+
+            byte_string = data.encode("UTF8")
+            temp_vptr = IDL_StrToSTRING(byte_string)
+
+        else:
+
+            raise TypeError("Unsupported python type.")
+
+        if temp_vptr == NULL:
+
+            raise IDLLibraryError("Could not allocate variable.")
+
+        # create/locate new IDL variable
+        byte_string = variable.encode("UTF8")
+        dest_vptr = IDL_FindNamedVariable(byte_string, True)
+
+        if dest_vptr == NULL:
+
+            raise IDLLibraryError("Could not allocate variable.")
+
+        # populate variable with new data
+        IDL_VarCopy(temp_vptr, dest_vptr)
 
     cpdef object delete(self, str variable):
 
