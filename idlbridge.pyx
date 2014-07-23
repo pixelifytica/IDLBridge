@@ -338,6 +338,16 @@ cdef class IDLBridge:
 
             temp_vptr = IDL_GettmpFloat(<double> data)
 
+        elif isinstance(data, complex):
+
+            temp_vptr = IDL_Gettmp()
+
+            if temp_vptr != NULL:
+
+                temp_vptr.type = IDL_TYP_DCOMPLEX
+                temp_vptr.value.dcmp.r = data.real
+                temp_vptr.value.dcmp.i = data.imag
+
         elif isinstance(data, str):
 
             byte_string = data.encode("UTF8")

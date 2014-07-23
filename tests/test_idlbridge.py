@@ -265,6 +265,11 @@ class TestIDLBridge(TestCase):
         idl.put("test_put_float", 2.0)
         self.assertEqual(2.0, idl.get("test_put_float"), "Failed to put float.")
 
+    def test_put_scalar_complex(self):
+
+        idl.put("test_put_complex", 2.0+1.0j)
+        self.assertEqual(2.0+1.0j, idl.get("test_put_complex"), "Failed to put complex.")
+
     def test_put_string(self):
 
         idl.put("test_put_string", "test")
