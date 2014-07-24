@@ -69,7 +69,7 @@ cdef _initialise_idl(bint quiet=True):
     else:
 
         # library has already been cleaned up, it can not be reinitialised
-        raise IDLLibraryError("The IDL library has been shutdown, it can not be restarted in this session.")
+        raise IDLLibraryError("The IDL library has been shutdown, it cannot be restarted in this session.")
 
 
 cdef _cleanup_idl():
@@ -201,9 +201,9 @@ cdef class IDLBridge:
 
             return self._get_array_string(vptr)
 
-        elif vptr.type == IDL_TYP_STRUCT:
-
-            return self._get_array_structure(vptr)
+        # elif vptr.type == IDL_TYP_STRUCT:
+        #
+        #     return self._get_array_structure(vptr)
 
         else:
 
@@ -247,15 +247,9 @@ cdef class IDLBridge:
         new_dimensions.ptr = self._dimensions_idl_to_numpy(idl_array.n_dim, idl_array.dim)
         return np.PyArray_Newshape(numpy_array, &new_dimensions, np.NPY_CORDER)
 
-    cdef inline np.ndarray _get_array_structure(self, IDL_VPTR vptr):
-        """
-        To be written.
-
-        :param vptr:
-        :return:
-        """
-
-        return NotImplemented
+    # cdef inline np.ndarray _get_array_structure(self, IDL_VPTR vptr):
+    #
+    #     raise NotImplementedError("Arrays of structures are not supported.")
 
     cdef inline np.ndarray _get_array_scalar(self, IDL_VPTR vptr):
         """
@@ -305,6 +299,12 @@ cdef class IDLBridge:
         :param data: A pythons object containing data to send.
         """
 
+        # add support for lists by converting them to ndarrays
+        if isinstance(data, list):
+
+            data = np.array(data)
+
+        # call the appropriate type handler
         if isinstance(data, dict):
 
             self._put_structure(variable, data)
@@ -321,9 +321,60 @@ cdef class IDLBridge:
 
         raise NotImplementedError("Not currently implemented.")
 
-    cdef inline object _put_array(self, str variable, object data):
+    cdef inline object _put_array(self, str variable, np.ndarray data):
 
-        raise NotImplementedError("Not currently implemented.")
+        if data.dtype.kind == "U":
+
+            self._put_array_string(variable, data)
+
+        else:
+
+            self._put_array_scalar(variable, data)
+
+
+    cdef inline object _put_array_string(self, str variable, np.ndarray data):
+
+        pass
+
+    cdef inline object _put_array_scalar(self, str variable, np.ndarray data):
+
+        cdef:
+            int type, num_dimensions
+            IDL_MEMINT *dimensions
+            IDL_VPTR temp_vptr, dest_vptr
+            void *array_data
+
+        # obtain IDL type
+        type = self._type_numpy_to_idl(np.PyArray_TYPE(data))
+
+        # convert dimensions to IDL
+        num_dimensions = np.PyArray_NDIM(data)
+        if num_dimensions > IDL_MAX_ARRAY_DIM:
+
+            raise IDLValueError("Array contains more dimensions than IDL can handle ({} dimensions).".format(num_dimensions))
+
+        dimensions = self._dimensions_numpy_to_idl(num_dimensions, np.PyArray_DIMS(data))
+
+        # create temporary array and copy data
+        temp_vptr = IDL_Gettmp()
+
+        if temp_vptr == NULL:
+
+            raise IDLLibraryError("Could not allocate variable.")
+
+        array_data = <void *> IDL_MakeTempArray(type, num_dimensions, dimensions, IDL_ARR_INI_NOP, &temp_vptr)
+        memcpy(array_data, np.PyArray_DATA(data), np.PyArray_NBYTES(data))
+
+        # create/locate new IDL variable
+        byte_string = variable.encode("UTF8")
+        dest_vptr = IDL_FindNamedVariable(byte_string, True)
+
+        if dest_vptr == NULL:
+
+            raise IDLLibraryError("Could not allocate variable.")
+
+        # populate variable with new data
+        IDL_VarCopy(temp_vptr, dest_vptr)
 
     cdef inline object _put_scalar(self, str variable, object data):
 
@@ -340,8 +391,8 @@ cdef class IDLBridge:
 
         elif isinstance(data, complex):
 
+            # there is no get complex temporary function
             temp_vptr = IDL_Gettmp()
-
             if temp_vptr != NULL:
 
                 temp_vptr.type = IDL_TYP_DCOMPLEX
@@ -373,6 +424,12 @@ cdef class IDLBridge:
         IDL_VarCopy(temp_vptr, dest_vptr)
 
     cpdef object delete(self, str variable):
+        """
+        Deletes the specified IDL variable.
+
+        :param variable: A string specifying the name of the IDL variable to delete.
+        :return: None
+        """
 
         cdef IDL_VPTR vptr
 
@@ -515,7 +572,6 @@ class _IDLCallable:
 
         self.name = name
         self._idl = idl_bridge
-        self._id = idl_bridge._id
 
     def _process_arguments(self, arguments, temporary_variables):
 
@@ -657,6 +713,4 @@ def export_procedure(name):
 
     global __bridge__
     return __bridge__.export_procedure(name)
-
-
 

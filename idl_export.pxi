@@ -66,6 +66,12 @@ cdef extern from "idl_export.h":
     DEF IDL_V_STRUCT = 32
     DEF IDL_V_NOT_SCALAR = (IDL_V_ARR | IDL_V_FILE | IDL_V_STRUCT)
 
+    # array init constants
+    DEF IDL_ARR_INI_ZERO = 0	    # Zero data area
+    DEF IDL_ARR_INI_NOP = 1         # Don't do anything to data area
+    DEF IDL_ARR_INI_INDEX = 2	    # Put 1-D index into each elt.
+    DEF IDL_ARR_INI_TEST = 3        # Test if enough memory is available
+
     # init defines
     DEF IDL_INIT_QUIET = 64
     DEF IDL_INIT_NOCMDLINE = (1 << 12)
@@ -198,24 +204,11 @@ cdef extern from "idl_export.h":
 
     IDL_VPTR IDL_GettmpDouble(double value) nogil
 
+    char *IDL_MakeTempArray(int type, int n_dim, IDL_MEMINT dim[], int init, IDL_VPTR *var) nogil
+
     void IDL_VarCopy(IDL_VPTR src, IDL_VPTR dst) nogil
 
     char *IDL_VarGetString(IDL_VPTR vptr) nogil
 
     IDL_VPTR IDL_StrToSTRING(char *s) nogil
 
-    # int IDL_StructNumTags(IDL_StructDefPtr sdef)
-
-    # int IDL_Initialize(IDL_INIT_DATA *init_data)
-    #
-    # int IDL_Cleanup(int just_cleanup)
-    #
-    # int IDL_ExecuteStr(char* cmd)
-    #
-    # void IDL_StrStore(IDL_STRING *s, char *fs)
-    #
-    # IDL_VPTR IDL_ImportArray(int n_dim, int dim[], int type, UCHAR *data, void* free_cb)
-    #
-    # IDL_VPTR IDL_Gettmp()
-    #
-    # int IDL_ExecuteStr(CLIENT *pClient, char * pszCommand)

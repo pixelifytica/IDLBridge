@@ -43,8 +43,6 @@ class TestIDLBridge(TestCase):
         # Basically if this fails evey test is going to fail!
         idl.execute("d = 128")
 
-    # TODO: add test for null -> None
-
     def test_get_scalar_byte(self):
 
         # unsigned byte
@@ -223,7 +221,6 @@ class TestIDLBridge(TestCase):
                     + "j:complex(1.0, 2.0), k:dcomplex(1.0, 2.0),"
                     + "l:\"test\"}")
 
-        idl.execute("print, test_get_structure_basic")
         r = idl.get("test_get_structure_basic")
 
         v = {"a": 1, "b": 2, "c": 3, "d": 4, "e": 5, "f": 6,
@@ -275,57 +272,91 @@ class TestIDLBridge(TestCase):
         idl.put("test_put_string", "test")
         self.assertEqual("test", idl.get("test_put_string"), "Failed to put string.")
 
+    def test_put_list(self):
+
+        # lists get converted to numpy arrays by put
+        v = [1, 2, 3, 4, 5]
+        idl.put("test_put_list", v)
+        self.assertArrayEqual(np.array(v), idl.get("test_put_list"), "Failed to put list.")
+
     def test_put_array_uint8(self):
 
-        pass
+        v = np.array([1, 2, 3, 4, 5], dtype=np.uint8)
+        idl.put("test_put_array_1d_uint8", v)
+        self.assertArrayEqual(v, idl.get("test_put_array_1d_uint8"), "Failed to put uint8 array.")
 
     def test_put_array_int16(self):
 
-        pass
+        v = np.array([1, 2, 3, 4, 5], dtype=np.int16)
+        idl.put("test_put_array_1d_int16", v)
+        self.assertArrayEqual(v, idl.get("test_put_array_1d_int16"), "Failed to put int16 array.")
 
     def test_put_array_uint16(self):
 
-        pass
+        v = np.array([1, 2, 3, 4, 5], dtype=np.uint16)
+        idl.put("test_put_array_1d_uint16", v)
+        self.assertArrayEqual(v, idl.get("test_put_array_1d_uint16"), "Failed to put uint16 array.")
 
     def test_put_array_int32(self):
 
-        pass
+        v = np.array([1, 2, 3, 4, 5], dtype=np.int32)
+        idl.put("test_put_array_1d_int32", v)
+        self.assertArrayEqual(v, idl.get("test_put_array_1d_int32"), "Failed to put int32 array.")
 
     def test_put_array_uint32(self):
 
-        pass
+        v = np.array([1, 2, 3, 4, 5], dtype=np.uint32)
+        idl.put("test_put_array_1d_uint32", v)
+        self.assertArrayEqual(v, idl.get("test_put_array_1d_uint32"), "Failed to put uint32 array.")
 
     def test_put_array_int64(self):
 
-        pass
+        v = np.array([1, 2, 3, 4, 5], dtype=np.int64)
+        idl.put("test_put_array_1d_int64", v)
+        self.assertArrayEqual(v, idl.get("test_put_array_1d_int64"), "Failed to put int64 array.")
 
     def test_put_array_uint64(self):
 
-        pass
+        v = np.array([1, 2, 3, 4, 5], dtype=np.uint64)
+        idl.put("test_put_array_1d_uint64", v)
+        self.assertArrayEqual(v, idl.get("test_put_array_1d_uint64"), "Failed to put uint64 array.")
 
     def test_put_array_float32(self):
 
-        pass
+        v = np.array([1, 2, 3, 4, 5], dtype=np.float32)
+        idl.put("test_put_array_1d_float32", v)
+        self.assertArrayEqual(v, idl.get("test_put_array_1d_float32"), "Failed to put float32 array.")
 
     def test_put_array_float64(self):
 
-        pass
+        v = np.array([1, 2, 3, 4, 5], dtype=np.float64)
+        idl.put("test_put_array_1d_float64", v)
+        self.assertArrayEqual(v, idl.get("test_put_array_1d_float64"), "Failed to put float64 array.")
 
     def test_put_array_complex64(self):
 
-        pass
+        v = np.array([1+6j, 2+7j, 3+8j, 4+9j, 5+10j], dtype=np.complex64)
+        idl.put("test_put_array_1d_complex64", v)
+        self.assertArrayEqual(v, idl.get("test_put_array_1d_complex64"), "Failed to put complex64 array.")
 
     def test_put_array_complex128(self):
 
-        pass
+        v = np.array([1+6j, 2+7j, 3+8j, 4+9j, 5+10j], dtype=np.complex128)
+        idl.put("test_put_array_1d_complex128", v)
+        self.assertArrayEqual(v, idl.get("test_put_array_1d_complex128"), "Failed to put complex128 array.")
 
     def test_put_array_string(self):
 
-        pass
+        v = np.array(["dog", "", "cat", "fish"])
+        idl.put("test_put_array_1d_string", v)
+        self.assertArrayEqual(v, idl.get("test_put_array_1d_string"), "Failed to put string array.")
 
     def test_put_array_multidimensional(self):
 
-        pass
+        # ND array
+        v = np.arange(8*7*6*5*4*3*2*1, dtype=np.int32).reshape((1, 2, 3, 4, 5, 6, 7, 8))
+        idl.put("test_put_array_multidimensional", v)
+        self.assertArrayEqual(v, idl.get("test_put_array_multidimensional"), "Failed to put multidimensional array.")
 
     def test_put_structure_basic(self):
 
