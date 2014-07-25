@@ -323,29 +323,16 @@ cdef class IDLBridge:
 
     cdef inline object _put_array(self, str variable, np.ndarray data):
 
-        if data.dtype.kind == "U":
-
-            self._put_array_string(variable, data)
-
-        else:
-
-            self._put_array_scalar(variable, data)
-
-
-    cdef inline object _put_array_string(self, str variable, np.ndarray data):
-
-        pass
-
-    cdef inline object _put_array_scalar(self, str variable, np.ndarray data):
-
         cdef:
-            int type, num_dimensions
+            int type, num_dimensions, index
             IDL_MEMINT *dimensions
             IDL_VPTR temp_vptr, dest_vptr
+            IDL_STRING string
             void *array_data
 
-        # obtain IDL type
-        type = self._type_numpy_to_idl(np.PyArray_TYPE(data))
+        if np.PyArray_SIZE(data) == 0:
+
+            raise IDLValueError("IDL cannot handle empty arrays.")
 
         # convert dimensions to IDL
         num_dimensions = np.PyArray_NDIM(data)
@@ -362,8 +349,27 @@ cdef class IDLBridge:
 
             raise IDLLibraryError("Could not allocate variable.")
 
-        array_data = <void *> IDL_MakeTempArray(type, num_dimensions, dimensions, IDL_ARR_INI_NOP, &temp_vptr)
-        memcpy(array_data, np.PyArray_DATA(data), np.PyArray_NBYTES(data))
+            # string type requires special handling
+        if np.PyArray_ISSTRING(data):
+
+            array_data = <void *> IDL_MakeTempArray(IDL_TYP_STRING, num_dimensions, dimensions, IDL_ARR_INI_NOP, &temp_vptr)
+
+            # flatten array
+            data = np.PyArray_Ravel(data, np.NPY_ANYORDER)
+
+            # convert strings to IDL_Strings
+            for index in range(np.PyArray_SIZE(data)):
+
+                byte_string = data[index].encode("UTF8")
+                IDL_StrStore(&(<IDL_STRING *> array_data)[index], byte_string)
+
+        else:
+
+            # obtain IDL type
+            type = self._type_numpy_to_idl(np.PyArray_TYPE(data))
+
+            array_data = <void *> IDL_MakeTempArray(type, num_dimensions, dimensions, IDL_ARR_INI_NOP, &temp_vptr)
+            memcpy(array_data, np.PyArray_DATA(data), np.PyArray_NBYTES(data))
 
         # create/locate new IDL variable
         byte_string = variable.encode("UTF8")

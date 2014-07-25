@@ -212,3 +212,4 @@ cdef extern from "idl_export.h":
 
     IDL_VPTR IDL_StrToSTRING(char *s) nogil
 
+    void IDL_StrStore(IDL_STRING *s, const char *fs) nogil

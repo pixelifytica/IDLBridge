@@ -347,9 +347,9 @@ class TestIDLBridge(TestCase):
 
     def test_put_array_string(self):
 
-        v = np.array(["dog", "", "cat", "fish"])
-        idl.put("test_put_array_1d_string", v)
-        self.assertArrayEqual(v, idl.get("test_put_array_1d_string"), "Failed to put string array.")
+        v = np.array([["dog", "", "lemon"], ["cat", "fish", "siren"]])
+        idl.put("test_put_array_string", v)
+        self.assertArrayEqual(v, idl.get("test_put_array_string"), "Failed to put string array.")
 
     def test_put_array_multidimensional(self):
 
@@ -357,6 +357,13 @@ class TestIDLBridge(TestCase):
         v = np.arange(8*7*6*5*4*3*2*1, dtype=np.int32).reshape((1, 2, 3, 4, 5, 6, 7, 8))
         idl.put("test_put_array_multidimensional", v)
         self.assertArrayEqual(v, idl.get("test_put_array_multidimensional"), "Failed to put multidimensional array.")
+
+    def test_put_array_empty(self):
+
+        # IDL can not handle empty arras
+        with self.assertRaises(idl.IDLValueError):
+
+            idl.put("test_put_array_empty", [])
 
     def test_put_structure_basic(self):
 
