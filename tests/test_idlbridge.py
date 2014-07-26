@@ -15,33 +15,22 @@ class TestIDLBridge(TestCase):
         # check all elements are equal
         self.assertTrue((first == second).any(), message + " Elements are not the same.")
 
-#    def assertDictEqualExtended(self, first, second, message):
-
-        # # the basic dict() == dict() fails on numpy arrays so we need to build a special test
-        #
-        # # check keys are equal
-        # self.assertEqual(first.keys(), second.keys(), message)
-        #
-        # # check each item
-        # for key, first_item in first.items():
-        #
-        #     second_item = second[key]
-        #
-        #     if isinstance(first_item, dict):
-        #
-        #         self.assertIsInstance(second_item, dict)
-        #         self.assertDictEqual(first_item, second_item, message)
-        #
-        #     elif isinstance(first_item, np.ndarray):
-
-
-
     def test_execute(self):
 
         # This function is difficult to test as it requires the other functions.
         # Here we just test the command executes without a failure.
         # Basically if this fails evey test is going to fail!
         idl.execute("d = 128")
+
+    def test_get_missing(self):
+
+        # create and delete variable in idl to ensure it does not exist!
+        idl.execute("test_get_missing = 1")
+        idl.execute("delvar, test_get_missing")
+
+        with self.assertRaises(idl.IDLValueError):
+
+            idl.get("test_get_missing")
 
     def test_get_scalar_byte(self):
 
@@ -229,12 +218,21 @@ class TestIDLBridge(TestCase):
 
         self.assertEqual(v, r, "Failed to get basic structure.")
 
+    def test_get_structure_array(self):
+
+        idl.execute("test_get_structure_array = {a:[1, 2, 3, 4, 5], s:{a:1, b:2, c:7}}")
+        r = idl.get("test_get_structure_array")
+
+        v = {"a": np.array([1, 2, 3, 4, 5], dtype=np.int16)}
+
+        self.assertArrayEqual(v["a"], r["a"], "Failed to get array in structure.")
+
     def test_get_structure_nested(self):
 
-        idl.execute("test_get_structure_nested = {s:{a:1, b:2}, a:[1, 2, 3, 4, 5]}")
+        idl.execute("test_get_structure_nested = {a:{g:8, h:{s:\"hello\"}}, s:{a:1, b:2, c:7}}")
         r = idl.get("test_get_structure_nested")
 
-        v = {"s": {"a": 1, "b": 2}, "a": np.array([1, 2, 3, 4, 5], dtype=np.int16)}
+        v = {"a": {"g": 8, "h": {"s": "hello"}}, "s": {"a": 1, "b": 2, "c": 7}}
 
         self.assertEqual(v, r, "Failed to get nested structure.")
 
@@ -367,15 +365,35 @@ class TestIDLBridge(TestCase):
 
     def test_put_structure_basic(self):
 
-        pass
+        v = {"a": 1, "b": 1.0, "c": 1+2j, "d": "test"}
+
+        idl.put("test_put_structure_basic", v)
+
+        self.assertEqual(v, idl.get("test_put_structure_basic"), "Failed to put basic structure.")
+
+    def test_put_structure_array(self):
+
+        v = {"a": np.array([1, 2, 3, 4, 5], dtype=np.int16)}
+
+        idl.put("test_put_structure_array", v)
+
+        self.assertEqual(v, idl.get("test_put_structure_array"), "Failed to put array structure.")
 
     def test_put_structure_nested(self):
 
-        pass
+        v = {"s": {"a": 5, "b": 7}}
+
+        idl.put("test_put_structure_nested", v)
+
+        self.assertEqual(v, idl.get("test_put_structure_nested"), "Failed to put nested structure.")
 
     def test_delete(self):
 
-        pass
+        idl.execute("test_delete = 5")
+        idl.delete("test_delete")
+        with self.assertRaises(idl.IDLValueError):
+
+            idl.get("test_delete")
 
     def test_function(self):
 

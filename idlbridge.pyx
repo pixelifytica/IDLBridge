@@ -151,6 +151,17 @@ cdef class IDLBridge:
 
             raise IDLValueError("Variable {} not found.".format(variable.upper()))
 
+        # decode and return the IDL_Variable
+        return self._get(vptr)
+
+    cdef object _get(self, IDL_VPTR vptr):
+        """
+        Converts an IDL variable to a python variable.
+
+        :param variable: A valid IDL_VPTR
+        :return: The IDL variable data converted to python form.
+        """
+
         # identify variable type and translate to python
         if vptr.flags & IDL_V_ARR:
 
@@ -283,13 +294,48 @@ cdef class IDLBridge:
 
     cdef inline dict _get_structure(self, IDL_VPTR vptr):
         """
-        To be written.
+        Converts an IDL structure a python dictionary.
 
-        :param vptr:
-        :return:
+        :param vptr: An IDL variable pointer pointing to an IDL structure definition.
+        :return: A python dictionary.
         """
 
-        raise NotImplementedError("Not currently implemented.")
+        cdef:
+            str tag_name_bytes
+            IDL_VPTR tag_vptr
+            IDL_MEMINT tag_offset
+            int index
+            dict result
+
+        result = {}
+
+        # parse structure definition
+        num_tags = IDL_StructNumTags(vptr.value.s.sdef)
+        for index in range(num_tags):
+
+            tag_name = IDL_StructTagNameByIndex(vptr.value.s.sdef, index, IDL_M_GENERIC, NULL).decode("UTF8").lower()
+            tag_offset = IDL_StructTagInfoByIndex(vptr.value.s.sdef, index, IDL_M_GENERIC, &tag_vptr)
+
+            # Populate IDL_VPTR value with data as it isn't actually set...!
+            # (why idl doesn't do this itself I really don't know)
+            if tag_vptr.flags & IDL_V_STRUCT:
+
+                # structure
+                tag_vptr.value.s.arr.data = <UCHAR *> (vptr.value.s.arr.data + tag_offset)
+
+            elif tag_vptr.flags & IDL_V_ARR:
+
+                # array
+                tag_vptr.value.arr.data = <UCHAR *> (vptr.value.s.arr.data + tag_offset)
+
+            else:
+
+                # everything else
+                tag_vptr.value = (<IDL_ALLTYPES *> (vptr.value.s.arr.data + tag_offset))[0]
+
+            result[tag_name] = self._get(tag_vptr)
+
+        return result
 
     cpdef object put(self, str variable, object data):
         """
@@ -299,6 +345,8 @@ cdef class IDLBridge:
         :param data: A pythons object containing data to send.
         """
 
+        cdef IDL_VPTR temp_vptr, dest_vptr
+
         # add support for lists by converting them to ndarrays
         if isinstance(data, list):
 
@@ -307,26 +355,85 @@ cdef class IDLBridge:
         # call the appropriate type handler
         if isinstance(data, dict):
 
-            self._put_structure(variable, data)
+            temp_vptr = self._put_structure(variable, data)
 
         elif isinstance(data, np.ndarray):
 
-            self._put_array(variable, data)
+            temp_vptr = self._put_array(variable, data)
 
         else:
 
-            self._put_scalar(variable, data)
+            temp_vptr = self._put_scalar(variable, data)
 
-    cdef inline object _put_structure(self, str variable, object data):
+        # create/locate IDL variable
+        byte_string = variable.encode("UTF8")
+        dest_vptr = IDL_FindNamedVariable(byte_string, True)
 
-        raise NotImplementedError("Not currently implemented.")
+        if dest_vptr == NULL:
 
-    cdef inline object _put_array(self, str variable, np.ndarray data):
+            raise IDLLibraryError("Could not allocate variable.")
+
+        # populate variable with new data
+        IDL_VarCopy(temp_vptr, dest_vptr)
+
+    cdef inline IDL_VPTR _put_structure(self, str variable, object data) except *:
+
+        # cdef:
+        #
+        #     int num_tags
+        #     IDL_STRUCT_TAG_DEF *tags
+        #     IDL_StructDefPtr sdef
+        #
+        # # Unlike python dictionary keys, IDL structure tags are case-insensitive.
+        # # Converting the keys to tags could result in duplicate names, this must be prevented.
+        # if not self._tags_unique(data):
+        #
+        #     raise IDLValueError("Duplicate tag (key) name found. IDL structure tags are case insensitive and must be unique.")
+        #
+        # # recursively assemble structure tag definitions
+        # tags = self._generate_tags(data)
+        #
+        # # create an anonymous structure definition
+        # sdef = IDL_MakeStruct(NULL, tags)
+        #
+        # # free the memory allocated to hold the tag definition structures
+        # self._free_tags(tags)
+        #
+        # if sdef == NULL:
+        #
+        #     raise IDLLibraryError("Failed to create structure definition.")
+        #
+        # # generate a temporary structure
+        # #char *IDL_MakeTempStruct(IDL_StructDefPtr sdef, int n_dim, IDL_MEMINT *dim, IDL_VPTR *var, int zero)
+        #
+        # # recursively populate the structure
+        #
+        # # copy to variable
+        #
+
+        # KLUDGE!!!! so we can test changes
+        return IDL_GettmpFloat(-1.0)
+
+
+    cdef inline bint _tags_unique(self, dict data):
+
+        # TODO: write me
+
+        # need to recurse through nested dicts
+
+        # extract keys as a list, make lower case and sort
+        # if keys are duplicated, they will be adjacent due to the sort
+        # step through comparing adjacent keys
+        # return False if any adjacent keys are found to be the same
+
+        return True
+
+    cdef inline IDL_VPTR _put_array(self, str variable, np.ndarray data) except *:
 
         cdef:
             int type, num_dimensions, index
             IDL_MEMINT *dimensions
-            IDL_VPTR temp_vptr, dest_vptr
+            IDL_VPTR temp_vptr
             IDL_STRING string
             void *array_data
 
@@ -371,20 +478,11 @@ cdef class IDLBridge:
             array_data = <void *> IDL_MakeTempArray(type, num_dimensions, dimensions, IDL_ARR_INI_NOP, &temp_vptr)
             memcpy(array_data, np.PyArray_DATA(data), np.PyArray_NBYTES(data))
 
-        # create/locate new IDL variable
-        byte_string = variable.encode("UTF8")
-        dest_vptr = IDL_FindNamedVariable(byte_string, True)
+        return temp_vptr
 
-        if dest_vptr == NULL:
+    cdef inline IDL_VPTR _put_scalar(self, str variable, object data) except *:
 
-            raise IDLLibraryError("Could not allocate variable.")
-
-        # populate variable with new data
-        IDL_VarCopy(temp_vptr, dest_vptr)
-
-    cdef inline object _put_scalar(self, str variable, object data):
-
-        cdef IDL_VPTR temp_vptr, dest_vptr
+        cdef IDL_VPTR temp_vptr
 
         # create appropriate IDL temporary variable
         if isinstance(data, int):
@@ -418,16 +516,7 @@ cdef class IDLBridge:
 
             raise IDLLibraryError("Could not allocate variable.")
 
-        # create/locate new IDL variable
-        byte_string = variable.encode("UTF8")
-        dest_vptr = IDL_FindNamedVariable(byte_string, True)
-
-        if dest_vptr == NULL:
-
-            raise IDLLibraryError("Could not allocate variable.")
-
-        # populate variable with new data
-        IDL_VarCopy(temp_vptr, dest_vptr)
+        return temp_vptr
 
     cpdef object delete(self, str variable):
         """
@@ -628,7 +717,7 @@ class IDLFunction(_IDLCallable):
         keyword_fragment = self._process_keywords(keywords, temporary_variables)
 
         # assemble command string
-        return_variable = "_idlbridge_return".format(id=self._id)
+        return_variable = "_idlbridge_return"
         command = "{rtnvar} = {name}({arg}".format(rtnvar=return_variable, name=self.name, arg=argument_fragment)
 
         if argument_fragment and keyword_fragment:

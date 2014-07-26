@@ -19,7 +19,7 @@ cdef extern from "idl_export.h":
         ctypedef long long IDL_LONG64
         ctypedef unsigned long long IDL_ULONG64
 
-        # IDL pointer types
+        # IDL index types
         ctypedef IDL_LONG IDL_MEMINT
         ctypedef IDL_ULONG IDL_UMEMINT
 
@@ -35,7 +35,7 @@ cdef extern from "idl_export.h":
         ctypedef long long IDL_LONG64
         ctypedef unsigned long long IDL_ULONG64
 
-        # IDL pointer types
+        # IDL index types
         ctypedef IDL_LONG64 IDL_MEMINT
         ctypedef IDL_ULONG64 IDL_UMEMINT
 
@@ -130,6 +130,15 @@ cdef extern from "idl_export.h":
         IDL_ARRAY *arr              # pointer to array block containing data
         _idl_structure *sdef        # pointer to structure definition
 
+    DEF IDL_STD_INHERIT = 1
+
+    ctypedef struct IDL_STRUCT_TAG_DEF:
+
+        char *name
+        IDL_MEMINT *dims
+        void *type
+        UCHAR flags
+
     # string type
     ctypedef int IDL_STRING_SLEN_T
 
@@ -173,6 +182,12 @@ cdef extern from "idl_export.h":
 
     ctypedef IDL_VARIABLE *IDL_VPTR
 
+    # IDL message flags
+    DEF IDL_M_GENERIC = -1
+    DEF IDL_M_NAMED_GENERIC = -2
+    DEF IDL_M_SYSERR = -4
+    DEF IDL_M_BADARRDIM = -174
+
     # functions
     int IDL_Initialize(IDL_INIT_DATA *init_data) nogil
 
@@ -206,6 +221,8 @@ cdef extern from "idl_export.h":
 
     char *IDL_MakeTempArray(int type, int n_dim, IDL_MEMINT dim[], int init, IDL_VPTR *var) nogil
 
+    void IDL_Deltmp(IDL_VPTR p)
+
     void IDL_VarCopy(IDL_VPTR src, IDL_VPTR dst) nogil
 
     char *IDL_VarGetString(IDL_VPTR vptr) nogil
@@ -213,3 +230,13 @@ cdef extern from "idl_export.h":
     IDL_VPTR IDL_StrToSTRING(char *s) nogil
 
     void IDL_StrStore(IDL_STRING *s, const char *fs) nogil
+
+    int IDL_StructNumTags(IDL_StructDefPtr sdef)
+
+    char *IDL_StructTagNameByIndex(IDL_StructDefPtr sdef, int index, int msg_action, char **struct_name)
+
+    IDL_MEMINT IDL_StructTagInfoByIndex(IDL_StructDefPtr sdef, int index,int msg_action, IDL_VPTR *var)
+
+    char *IDL_MakeTempStruct(IDL_StructDefPtr sdef, int n_dim, IDL_MEMINT *dim, IDL_VPTR *var, int zero)
+
+    IDL_StructDefPtr IDL_MakeStruct(char *name, IDL_STRUCT_TAG_DEF *tags)
