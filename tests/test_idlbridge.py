@@ -373,11 +373,12 @@ class TestIDLBridge(TestCase):
 
     def test_put_structure_array(self):
 
-        v = {"a": np.array([1, 2, 3, 4, 5], dtype=np.int16)}
+        v = {"a": np.array([1, 2, 3, 4, 5], dtype=np.int16), "b": np.array(["alpha", "beta"])}
 
         idl.put("test_put_structure_array", v)
 
-        self.assertEqual(v, idl.get("test_put_structure_array"), "Failed to put array structure.")
+        self.assertArrayEqual(v["a"], idl.get("test_put_structure_array")["a"], "Failed to put array structure (scalar array).")
+        self.assertArrayEqual(v["b"], idl.get("test_put_structure_array")["b"], "Failed to put array structure (string array).")
 
     def test_put_structure_nested(self):
 
@@ -386,6 +387,24 @@ class TestIDLBridge(TestCase):
         idl.put("test_put_structure_nested", v)
 
         self.assertEqual(v, idl.get("test_put_structure_nested"), "Failed to put nested structure.")
+
+    def test_put_structure_bad_keys(self):
+
+        v = {"alpha": 1, "beta": 2, "Alpha": 3}
+
+        with self.assertRaises(idl.IDLValueError):
+
+            idl.put("test_put_structure_bad_keys", v)
+
+    def test_put_structure_nested_empty(self):
+
+        v = {"s": {}}
+
+        with self.assertRaises(idl.IDLValueError):
+
+            idl.put("test_put_structure_nested_empty", v)
+
+
 
     def test_delete(self):
 

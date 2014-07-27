@@ -284,6 +284,7 @@ cdef class IDLBridge:
         numpy_type = self._type_idl_to_numpy(vptr.type)
 
         # IDL defines its dimensions in the opposite order to numpy
+        # TODO: FIX INVALID MEMORY USE
         numpy_dimensions = self._dimensions_idl_to_numpy(idl_array.n_dim, idl_array.dim)
 
         # generate an empty numpy array and copy IDL array data
@@ -355,7 +356,8 @@ cdef class IDLBridge:
         # call the appropriate type handler
         if isinstance(data, dict):
 
-            temp_vptr = self._put_structure(variable, data)
+            self._put_structure(variable, data)
+            return
 
         elif isinstance(data, np.ndarray):
 
@@ -376,55 +378,203 @@ cdef class IDLBridge:
         # populate variable with new data
         IDL_VarCopy(temp_vptr, dest_vptr)
 
-    cdef inline IDL_VPTR _put_structure(self, str variable, object data) except *:
+    # cdef inline IDL_VPTR _put_structure(self, str variable, object data) except *:
+    #
+    #     cdef:
+    #
+    #         int num_tags
+    #         IDL_STRUCT_TAG_DEF *tags
+    #         IDL_StructDefPtr sdef
+    #         IDL_ARRAY_DIM dimensions
+    #         char *array
+    #         IDL_VPTR temp_vptr
+    #
+    #     # Unlike python dictionary keys, IDL structure tags are case-insensitive.
+    #     # Converting the keys to tags could result in duplicate names, this must be prevented.
+    #     if not self._tags_unique(data):
+    #
+    #         raise IDLValueError("Duplicate tag (key) name found. IDL structure tags are case insensitive and must be unique.")
+    #
+    #     # recursively assemble structure tag definitions
+    #     tags = self._generate_tags(data)
+    #
+    #     # create an anonymous structure definition
+    #     sdef = IDL_MakeStruct(NULL, tags)
+    #
+    #     # free the memory allocated to hold the tag definition structures
+    #     self._free_tags(tags, data)
+    #
+    #     if sdef == NULL:
+    #
+    #         raise IDLLibraryError("Failed to create structure definition.")
+    #
+    #     # generate a temporary structure
+    #     dimensions[0] = 1
+    #     array = IDL_MakeTempStruct(sdef, 1, &dimensions, &temp_vptr, True)
+    #     # data = IDL_MakeTempStruct(sdef, 1, &dimensions, &temp_vptr, False)
+    #
+    #     # recursively populate the structure
+    #     self._populate_structure(array, data)
+    #
+    #     # KLUDGE!!!! so we can test changes
+    #     return IDL_GettmpFloat(-1.0)
+    #
+    #
+    # cdef inline bint _tags_unique(self, dict data):
+    #
+    #     # TODO: write me
+    #
+    #     # need to recurse through nested dicts
+    #
+    #     # extract keys as a list, make lower case and sort
+    #     # if keys are duplicated, they will be adjacent due to the sort
+    #     # step through comparing adjacent keys
+    #     # return False if any adjacent keys are found to be the same
+    #
+    #     return True
+    #
+    # cdef inline IDL_STRUCT_TAG_DEF *_generate_tags(self, dict data) except *:
+    #
+    #     cdef:
+    #         IDL_STRUCT_TAG_DEF *tags
+    #         IDL_MEMINT *dimensions
+    #         int num_keys, index
+    #
+    #     # IDL does not support empty structures
+    #     if not data:
+    #
+    #         raise IDLValueError("IDL does not support zero sized structures.")
+    #
+    #     # allocate memory for structure definitions
+    #     tags = <IDL_STRUCT_TAG_DEF *> malloc(len(data))
+    #
+    #     # walk through dictionary and recursively build
+    #     for index, (key, item) in enumerate(dict.items()):
+    #
+    #         dimensions = self._new_idl_dimensions()
+    #
+    #         tags[index].name = key.lower().encode("UTF8")
+    #         tags[index].flags = 0
+    #
+    #         if isinstance(item, dict):
+    #
+    #             # nested structure
+    #             try:
+    #
+    #                 tags[index].type = self._generate_tags(item)
+    #
+    #             except IDLValueError:
+    #
+    #                 # clean up
+    #                 for tag in range(index):
+    #
+    #                     free(tags[tag].dims)
+    #
+    #                 free(tags)
+    #
+    #             # single dimension, single element
+    #             dimensions[0] = 1
+    #             dimensions[1] = 1
+    #             tags[index].dims = dimensions
+    #
+    #         elif isinstance(item, np.ndarray):
+    #
+    #             pass
+    #
+    #         else:
+    #
+    #             pass
+    #
+    #     return tags
+    #
+    # cdef inline void _free_tags(self, IDL_STRUCT_TAG_DEF *tags, dict data):
+    #
+    #     # free dimension
+    #     #free tags
+    #     pass
+    #
+    # cdef inline void _populate_structure(self, char *array, dict data) except *:
+    #
+    #     # need to free tmp if anything fails -> do this in enclosing fn and free on exception
+    #     pass
 
-        # cdef:
-        #
-        #     int num_tags
-        #     IDL_STRUCT_TAG_DEF *tags
-        #     IDL_StructDefPtr sdef
-        #
-        # # Unlike python dictionary keys, IDL structure tags are case-insensitive.
-        # # Converting the keys to tags could result in duplicate names, this must be prevented.
-        # if not self._tags_unique(data):
-        #
-        #     raise IDLValueError("Duplicate tag (key) name found. IDL structure tags are case insensitive and must be unique.")
-        #
-        # # recursively assemble structure tag definitions
-        # tags = self._generate_tags(data)
-        #
-        # # create an anonymous structure definition
-        # sdef = IDL_MakeStruct(NULL, tags)
-        #
-        # # free the memory allocated to hold the tag definition structures
-        # self._free_tags(tags)
-        #
-        # if sdef == NULL:
-        #
-        #     raise IDLLibraryError("Failed to create structure definition.")
-        #
-        # # generate a temporary structure
-        # #char *IDL_MakeTempStruct(IDL_StructDefPtr sdef, int n_dim, IDL_MEMINT *dim, IDL_VPTR *var, int zero)
-        #
-        # # recursively populate the structure
-        #
-        # # copy to variable
-        #
+    cdef inline object _put_structure(self, str name, dict data):
+        """
+        Create a structure in IDL from dictionary in Python.
 
-        # KLUDGE!!!! so we can test changes
-        return IDL_GettmpFloat(-1.0)
+        This method isn't the most efficient way to send structure data.
+        Unfortunately the IDL C structure API is a completely brain dead design
+        and offers no opportunity for code reuse, you basically have to
+        implement every type again just for structures. The small speed
+        decrease is worth the trade off for maintainable (bug free) code.
+        """
 
+        self.put("_idlbridge_depth_", 0)
+
+        # build structure in temporary variable
+        tempvar = "_idlbridge_tmp_"
+        self._build_idl_structure(tempvar, data)
+
+        # assign complete structure to target variable
+        self.execute("{name} = {tempvar}".format(name=name, tempvar=tempvar))
+
+    cdef inline object _build_idl_structure(self, str name, dict data):
+
+        # Unlike python dictionary keys, IDL structure tags are case-insensitive.
+        # Converting the keys to tags could result in duplicate names, this must be prevented.
+        if not self._tags_unique(data):
+
+            raise IDLValueError("Duplicate tag (key) name found. IDL structure tags are case insensitive and must be unique.")
+
+        # create blank structure
+        self.execute("{name} = {{}}".format(name=name))
+
+        tempvar = "_idlbridge_v{depth}_".format(depth=self.get("_idlbridge_depth_"))
+        print(name, tempvar)
+
+        for key, item in data.items():
+
+            print(key, item)
+
+            if isinstance(item, dict):
+
+                # IDL can not handle empty structures as leaves in a tree
+                if not item:
+
+                    raise IDLValueError("IDL cannot handle empty structures nested inside a structure.")
+
+                self.execute("_idlbridge_depth_ = _idlbridge_depth_ + 1")
+                self._build_idl_structure(tempvar, item)
+                self.execute("_idlbridge_depth_ = _idlbridge_depth_ - 1")
+
+            else:
+
+                self.put(tempvar, item)
+
+            # append item to structure
+            self.execute("{name} = create_struct(\"{key}\", {tempvar}, {name})".format(name=name, key=key, tempvar=tempvar))
 
     cdef inline bint _tags_unique(self, dict data):
 
-        # TODO: write me
+        cdef:
+            list keys
+            int index
 
-        # need to recurse through nested dicts
+        if len(data) < 2:
+
+            return True
 
         # extract keys as a list, make lower case and sort
+        keys = [key.lower() for key in data.keys()]
+        keys.sort()
+
         # if keys are duplicated, they will be adjacent due to the sort
         # step through comparing adjacent keys
-        # return False if any adjacent keys are found to be the same
+        for index in range(len(keys) - 1):
+
+            if keys[index] == keys[index + 1]:
+
+                return False
 
         return True
 
@@ -447,6 +597,7 @@ cdef class IDLBridge:
 
             raise IDLValueError("Array contains more dimensions than IDL can handle ({} dimensions).".format(num_dimensions))
 
+        # TODO: FIX INVALID MEMORY USE
         dimensions = self._dimensions_numpy_to_idl(num_dimensions, np.PyArray_DIMS(data))
 
         # create temporary array and copy data
@@ -456,7 +607,7 @@ cdef class IDLBridge:
 
             raise IDLLibraryError("Could not allocate variable.")
 
-            # string type requires special handling
+        # string type requires special handling
         if np.PyArray_ISSTRING(data):
 
             array_data = <void *> IDL_MakeTempArray(IDL_TYP_STRING, num_dimensions, dimensions, IDL_ARR_INI_NOP, &temp_vptr)
@@ -627,6 +778,8 @@ cdef class IDLBridge:
         :return: A numpy dimension array.
         """
 
+        # TODO: this function is broken! the dimension data is out of scope meaning the pointer returned is dangerous!
+
         cdef:
             np.npy_intp numpy_dimensions[IDL_MAX_ARRAY_DIM]
             int index
@@ -648,6 +801,8 @@ cdef class IDLBridge:
         :param type: A numpy dimension array.
         :return: An IDL dimension array.
         """
+
+        # TODO: this function is broken! the dimension data is out of scope meaning the pointer returned is dangerous!
 
         cdef:
             IDL_ARRAY_DIM idl_dimensions
