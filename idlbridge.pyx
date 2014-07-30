@@ -1,7 +1,6 @@
 # TODO: add license
 
 from libc.string cimport memcpy
-from libc.stdlib cimport malloc, free
 import numpy as np
 cimport numpy as np
 
@@ -58,7 +57,7 @@ cdef _initialise_idl(bint quiet=True):
     if not __shutdown__:
 
         # initialise the IDL library
-        init_data.options = IDL_INIT_NOCMDLINE
+        init_data.options = IDL_INIT_NOCMDLINE #IDL_INIT_BACKGROUND
 
         if quiet:
 
@@ -234,6 +233,7 @@ cdef class IDLBridge:
             list strings
             int index
             np.ndarray array
+            np.npy_intp numpy_dimensions[IDL_MAX_ARRAY_DIM]
             np.PyArray_Dims new_dimensions
 
         # obtain IDL array structure from IDL variable
@@ -255,7 +255,8 @@ cdef class IDLBridge:
 
         # reshape array
         new_dimensions.len = idl_array.n_dim
-        new_dimensions.ptr = self._dimensions_idl_to_numpy(idl_array.n_dim, idl_array.dim)
+        self._dimensions_idl_to_numpy(numpy_dimensions, idl_array.n_dim, idl_array.dim)
+        new_dimensions.ptr = numpy_dimensions
         return np.PyArray_Newshape(numpy_array, &new_dimensions, np.NPY_CORDER)
 
     # cdef inline np.ndarray _get_array_structure(self, IDL_VPTR vptr):
@@ -273,7 +274,7 @@ cdef class IDLBridge:
         cdef:
             IDL_ARRAY *idl_array
             int num_dimensions
-            np.npy_intp dimensions[IDL_MAX_ARRAY_DIM]
+            np.npy_intp numpy_dimensions[IDL_MAX_ARRAY_DIM]
             np.ndarray numpy_array
             int index
 
@@ -284,8 +285,7 @@ cdef class IDLBridge:
         numpy_type = self._type_idl_to_numpy(vptr.type)
 
         # IDL defines its dimensions in the opposite order to numpy
-        # TODO: FIX INVALID MEMORY USE
-        numpy_dimensions = self._dimensions_idl_to_numpy(idl_array.n_dim, idl_array.dim)
+        self._dimensions_idl_to_numpy(numpy_dimensions, idl_array.n_dim, idl_array.dim)
 
         # generate an empty numpy array and copy IDL array data
         numpy_array = np.PyArray_SimpleNew(idl_array.n_dim, numpy_dimensions, numpy_type)
@@ -378,126 +378,6 @@ cdef class IDLBridge:
         # populate variable with new data
         IDL_VarCopy(temp_vptr, dest_vptr)
 
-    # cdef inline IDL_VPTR _put_structure(self, str variable, object data) except *:
-    #
-    #     cdef:
-    #
-    #         int num_tags
-    #         IDL_STRUCT_TAG_DEF *tags
-    #         IDL_StructDefPtr sdef
-    #         IDL_ARRAY_DIM dimensions
-    #         char *array
-    #         IDL_VPTR temp_vptr
-    #
-    #     # Unlike python dictionary keys, IDL structure tags are case-insensitive.
-    #     # Converting the keys to tags could result in duplicate names, this must be prevented.
-    #     if not self._tags_unique(data):
-    #
-    #         raise IDLValueError("Duplicate tag (key) name found. IDL structure tags are case insensitive and must be unique.")
-    #
-    #     # recursively assemble structure tag definitions
-    #     tags = self._generate_tags(data)
-    #
-    #     # create an anonymous structure definition
-    #     sdef = IDL_MakeStruct(NULL, tags)
-    #
-    #     # free the memory allocated to hold the tag definition structures
-    #     self._free_tags(tags, data)
-    #
-    #     if sdef == NULL:
-    #
-    #         raise IDLLibraryError("Failed to create structure definition.")
-    #
-    #     # generate a temporary structure
-    #     dimensions[0] = 1
-    #     array = IDL_MakeTempStruct(sdef, 1, &dimensions, &temp_vptr, True)
-    #     # data = IDL_MakeTempStruct(sdef, 1, &dimensions, &temp_vptr, False)
-    #
-    #     # recursively populate the structure
-    #     self._populate_structure(array, data)
-    #
-    #     # KLUDGE!!!! so we can test changes
-    #     return IDL_GettmpFloat(-1.0)
-    #
-    #
-    # cdef inline bint _tags_unique(self, dict data):
-    #
-    #     # TODO: write me
-    #
-    #     # need to recurse through nested dicts
-    #
-    #     # extract keys as a list, make lower case and sort
-    #     # if keys are duplicated, they will be adjacent due to the sort
-    #     # step through comparing adjacent keys
-    #     # return False if any adjacent keys are found to be the same
-    #
-    #     return True
-    #
-    # cdef inline IDL_STRUCT_TAG_DEF *_generate_tags(self, dict data) except *:
-    #
-    #     cdef:
-    #         IDL_STRUCT_TAG_DEF *tags
-    #         IDL_MEMINT *dimensions
-    #         int num_keys, index
-    #
-    #     # IDL does not support empty structures
-    #     if not data:
-    #
-    #         raise IDLValueError("IDL does not support zero sized structures.")
-    #
-    #     # allocate memory for structure definitions
-    #     tags = <IDL_STRUCT_TAG_DEF *> malloc(len(data))
-    #
-    #     # walk through dictionary and recursively build
-    #     for index, (key, item) in enumerate(dict.items()):
-    #
-    #         dimensions = self._new_idl_dimensions()
-    #
-    #         tags[index].name = key.lower().encode("UTF8")
-    #         tags[index].flags = 0
-    #
-    #         if isinstance(item, dict):
-    #
-    #             # nested structure
-    #             try:
-    #
-    #                 tags[index].type = self._generate_tags(item)
-    #
-    #             except IDLValueError:
-    #
-    #                 # clean up
-    #                 for tag in range(index):
-    #
-    #                     free(tags[tag].dims)
-    #
-    #                 free(tags)
-    #
-    #             # single dimension, single element
-    #             dimensions[0] = 1
-    #             dimensions[1] = 1
-    #             tags[index].dims = dimensions
-    #
-    #         elif isinstance(item, np.ndarray):
-    #
-    #             pass
-    #
-    #         else:
-    #
-    #             pass
-    #
-    #     return tags
-    #
-    # cdef inline void _free_tags(self, IDL_STRUCT_TAG_DEF *tags, dict data):
-    #
-    #     # free dimension
-    #     #free tags
-    #     pass
-    #
-    # cdef inline void _populate_structure(self, char *array, dict data) except *:
-    #
-    #     # need to free tmp if anything fails -> do this in enclosing fn and free on exception
-    #     pass
-
     cdef inline object _put_structure(self, str name, dict data):
         """
         Create a structure in IDL from dictionary in Python.
@@ -530,11 +410,8 @@ cdef class IDLBridge:
         self.execute("{name} = {{}}".format(name=name))
 
         tempvar = "_idlbridge_v{depth}_".format(depth=self.get("_idlbridge_depth_"))
-        print(name, tempvar)
 
         for key, item in data.items():
-
-            print(key, item)
 
             if isinstance(item, dict):
 
@@ -582,7 +459,7 @@ cdef class IDLBridge:
 
         cdef:
             int type, num_dimensions, index
-            IDL_MEMINT *dimensions
+            IDL_ARRAY_DIM dimensions
             IDL_VPTR temp_vptr
             IDL_STRING string
             void *array_data
@@ -597,8 +474,7 @@ cdef class IDLBridge:
 
             raise IDLValueError("Array contains more dimensions than IDL can handle ({} dimensions).".format(num_dimensions))
 
-        # TODO: FIX INVALID MEMORY USE
-        dimensions = self._dimensions_numpy_to_idl(num_dimensions, np.PyArray_DIMS(data))
+        self._dimensions_numpy_to_idl(dimensions, num_dimensions, np.PyArray_DIMS(data))
 
         # create temporary array and copy data
         temp_vptr = IDL_Gettmp()
@@ -767,53 +643,35 @@ cdef class IDLBridge:
 
             raise IDLTypeError("No matching IDL data type defined for given Numpy type.")
 
-    cdef inline np.npy_intp *_dimensions_idl_to_numpy(self, int dimension_count, IDL_ARRAY_DIM idl_dimensions):
+    cdef inline void _dimensions_idl_to_numpy(self, np.npy_intp *numpy_dimensions, int dimension_count, IDL_ARRAY_DIM idl_dimensions):
         """
         Converts an IDL dimension array to a numpy dimension array.
 
         IDL defines dimensions in the opposite order to numpy.
         This method inverts the dimension order.
-
-        :param type: An IDL dimension array.
-        :return: A numpy dimension array.
         """
 
-        # TODO: this function is broken! the dimension data is out of scope meaning the pointer returned is dangerous!
-
-        cdef:
-            np.npy_intp numpy_dimensions[IDL_MAX_ARRAY_DIM]
-            int index
+        cdef int index
 
         # IDL defines its dimensions with the opposite order to numpy, invert the order
         for index in range(dimension_count):
 
             numpy_dimensions[index] = idl_dimensions[dimension_count - (index + 1)]
 
-        return numpy_dimensions
-
-    cdef inline IDL_MEMINT *_dimensions_numpy_to_idl(self, int dimension_count, np.npy_intp *numpy_dimensions):
+    cdef inline void _dimensions_numpy_to_idl(self, IDL_MEMINT *idl_dimensions, int dimension_count, np.npy_intp *numpy_dimensions):
         """
         Converts a numpy dimension array to an IDL dimension array.
 
         IDL defines dimensions in the opposite order to numpy.
         This method inverts the dimension order.
-
-        :param type: A numpy dimension array.
-        :return: An IDL dimension array.
         """
 
-        # TODO: this function is broken! the dimension data is out of scope meaning the pointer returned is dangerous!
-
-        cdef:
-            IDL_ARRAY_DIM idl_dimensions
-            int index
+        cdef int index
 
         # IDL defines its dimensions with the opposite order to numpy, invert the order
         for index in range(dimension_count):
 
             idl_dimensions[index] = numpy_dimensions[dimension_count - (index + 1)]
-
-        return idl_dimensions
 
 
 class _IDLCallable:

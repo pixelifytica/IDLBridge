@@ -245,10 +245,11 @@ class TestIDLBridge(TestCase):
         # normal string
         idl.execute("test_get_string_normal = \"this is a test string\"")
         self.assertEqual("this is a test string", idl.get("test_get_string_normal"), "Failed to get normal string.")
-
-    def test_get_pointer(self):
-
-        pass
+    
+    # TODO: write me!
+    # def test_get_pointer(self):
+    #
+    #     pass
 
     def test_put_scalar_int(self):
 
@@ -404,8 +405,6 @@ class TestIDLBridge(TestCase):
 
             idl.put("test_put_structure_nested_empty", v)
 
-
-
     def test_delete(self):
 
         idl.execute("test_delete = 5")
@@ -414,13 +413,15 @@ class TestIDLBridge(TestCase):
 
             idl.get("test_delete")
 
-    def test_function(self):
+    # TODO: write me!
+    # def test_function(self):
+    #
+    #     pass
 
-        pass
-
-    def test_procedure(self):
-
-        pass
+    # TODO: write me!
+    # def test_procedure(self):
+    #
+    #     pass
 
 
 

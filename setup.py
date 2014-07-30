@@ -41,6 +41,8 @@ idl_include_path = os.environ['IDL_DIR'] + "/external/include"
 include_dirs = [".", numpy.get_include(), idl_include_path]
 library_dirs = [idl_library_path]
 libraries = ["idl"]
+extra_compile_args = []
+extra_link_args = ["-Wl,-rpath,.", "-Wl,-rpath,{}".format(idl_library_path)]
 
 setup_path = path.dirname(path.abspath(__file__))
 
@@ -59,7 +61,9 @@ for root, dirs, files in os.walk(setup_path):
                                         [pyx_file],
                                         include_dirs=include_dirs,
                                         libraries=libraries,
-                                        library_dirs=library_dirs))
+                                        library_dirs=library_dirs,
+                                        extra_compile_args=extra_compile_args,
+                                        extra_link_args=extra_link_args))
 
 if profile:
 

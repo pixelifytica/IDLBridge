@@ -73,6 +73,7 @@ cdef extern from "idl_export.h":
     DEF IDL_ARR_INI_TEST = 3        # Test if enough memory is available
 
     # init defines
+    DEF IDL_INIT_BACKGROUND	= 32
     DEF IDL_INIT_QUIET = 64
     DEF IDL_INIT_NOCMDLINE = (1 << 12)
 
@@ -231,12 +232,12 @@ cdef extern from "idl_export.h":
 
     void IDL_StrStore(IDL_STRING *s, const char *fs) nogil
 
-    int IDL_StructNumTags(IDL_StructDefPtr sdef)
+    int IDL_StructNumTags(IDL_StructDefPtr sdef) nogil
 
-    char *IDL_StructTagNameByIndex(IDL_StructDefPtr sdef, int index, int msg_action, char **struct_name)
+    char *IDL_StructTagNameByIndex(IDL_StructDefPtr sdef, int index, int msg_action, char **struct_name) nogil
 
-    IDL_MEMINT IDL_StructTagInfoByIndex(IDL_StructDefPtr sdef, int index,int msg_action, IDL_VPTR *var)
+    IDL_MEMINT IDL_StructTagInfoByIndex(IDL_StructDefPtr sdef, int index,int msg_action, IDL_VPTR *var) nogil
 
-    char *IDL_MakeTempStruct(IDL_StructDefPtr sdef, int n_dim, IDL_MEMINT *dim, IDL_VPTR *var, int zero)
+    char *IDL_MakeTempStruct(IDL_StructDefPtr sdef, int n_dim, IDL_MEMINT *dim, IDL_VPTR *var, int zero) nogil
 
-    IDL_StructDefPtr IDL_MakeStruct(char *name, IDL_STRUCT_TAG_DEF *tags)
+    IDL_StructDefPtr IDL_MakeStruct(char *name, IDL_STRUCT_TAG_DEF *tags) nogil
