@@ -789,36 +789,3 @@ class IDLProcedure(_IDLCallable):
             self._idl.delete(variable)
 
 
-# module level bridge and functions
-cdef IDLBridge __bridge__ = IDLBridge()
-
-def execute(command):
-
-    global __bridge__
-    __bridge__.execute(command)
-
-def get(variable):
-
-    global __bridge__
-    return __bridge__.get(variable)
-
-def put(variable, data):
-
-    global __bridge__
-    __bridge__.put(variable, data)
-
-def delete(variable):
-
-    global __bridge__
-    __bridge__.delete(variable)
-
-def export_function(name):
-
-    global __bridge__
-    return __bridge__.export_function(name)
-
-def export_procedure(name):
-
-    global __bridge__
-    return __bridge__.export_procedure(name)
-
