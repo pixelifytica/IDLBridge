@@ -26,7 +26,15 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-import ctypes
+"""
+The idlbridge package allows user to call IDL routines from inside Python.
+
+This package wraps the IDL callable library and provides a simple user interface
+for passing data between IDL and Python. IDL functions and procedures can be
+exposed in Python and be called like native Python functions.
+"""
+
+import ctypes as _ctypes
 from . import _core
 
 __author__ = 'Dr Alex Meakins'
@@ -36,7 +44,7 @@ __responsible_officer__ = 'Dr Alex Meakins'
 # preventing subsequently loaded IDL DLM libraries from seeing the IDL_*
 # symbols. To solve this we reload the library with RTLD_GLOBAL prior to
 # its first use.
-ctypes.CDLL(_core.__file__, mode=ctypes.RTLD_GLOBAL)
+_ctypes.CDLL(_core.__file__, mode=_ctypes.RTLD_GLOBAL)
 
 # module level bridge and functions
 __bridge__ = _core.IDLBridge()

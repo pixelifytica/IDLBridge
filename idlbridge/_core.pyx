@@ -71,8 +71,9 @@ class IDLValueError(ValueError):
 
 
 # global variables used to track the usage of the IDL library
-__references__ = 0
-__shutdown__ = False
+cdef:
+    int __references__ = 0
+    bint __shutdown__ = False
 
 
 cdef _initialise_idl(bint quiet=True):
@@ -148,7 +149,7 @@ cdef _deregister():
 
 cdef class IDLBridge:
     """
-
+    Implements a bridge between the IDL library and Python.
     """
 
     def __init__(self):
@@ -253,9 +254,9 @@ cdef class IDLBridge:
 
             return self._get_array_string(vptr)
 
-        # elif vptr.type == IDL_TYP_STRUCT:
-        #
-        #     return self._get_array_structure(vptr)
+        elif vptr.type == IDL_TYP_STRUCT:
+
+            return self._get_array_structure(vptr)
 
         else:
 
@@ -301,9 +302,9 @@ cdef class IDLBridge:
         new_dimensions.ptr = numpy_dimensions
         return np.PyArray_Newshape(numpy_array, &new_dimensions, np.NPY_CORDER)
 
-    # cdef inline np.ndarray _get_array_structure(self, IDL_VPTR vptr):
-    #
-    #     raise NotImplementedError("Arrays of structures are not supported.")
+    cdef inline np.ndarray _get_array_structure(self, IDL_VPTR vptr):
+
+        raise NotImplementedError("Arrays of structures are not supported.")
 
     cdef inline np.ndarray _get_array_scalar(self, IDL_VPTR vptr):
         """
@@ -473,7 +474,7 @@ cdef class IDLBridge:
             # append item to structure
             self.execute("{name} = create_struct(\"{key}\", {tempvar}, {name})".format(name=name, key=key, tempvar=tempvar))
 
-    cdef inline bint _tags_unique(self, dict data):
+    cdef inline bint _tags_unique(self, dict data) except *:
 
         cdef:
             list keys
@@ -556,7 +557,18 @@ cdef class IDLBridge:
         # create appropriate IDL temporary variable
         if isinstance(data, int):
 
-            temp_vptr = IDL_GettmpLong64(<IDL_LONG64> data)
+            # select an int of the appropriate size (min int16)
+            if -32768 <= data <= 32767:
+
+                temp_vptr = IDL_GettmpInt(<IDL_INT> data)
+
+            elif -2147483648 <= data <= 2147483647:
+
+                temp_vptr = IDL_GettmpLong(<IDL_LONG> data)
+
+            else:
+
+                temp_vptr = IDL_GettmpLong64(<IDL_LONG64> data)
 
         elif isinstance(data, float):
 
@@ -669,7 +681,7 @@ cdef class IDLBridge:
 
             return string.s.decode("UTF8")
 
-    cdef inline int _type_idl_to_numpy(self, int type):
+    cdef inline int _type_idl_to_numpy(self, int type) except *:
         """
         Maps IDL type values to numpy type values.
 
@@ -694,7 +706,7 @@ cdef class IDLBridge:
 
             raise IDLTypeError("No matching Numpy data type defined for given IDL type.")
 
-    cdef inline int _type_numpy_to_idl(self, int type):
+    cdef inline int _type_numpy_to_idl(self, int type) except *:
         """
         Maps numpy type values to IDL type values.
 

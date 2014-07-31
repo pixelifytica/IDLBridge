@@ -271,7 +271,7 @@ class TestIDLBridge(TestCase):
         # normal string
         idl.execute("test_get_string_normal = \"this is a test string\"")
         self.assertEqual("this is a test string", idl.get("test_get_string_normal"), "Failed to get normal string.")
-    
+
     # TODO: write me!
     # def test_get_pointer(self):
     #
