@@ -1,4 +1,30 @@
-# TODO: add license
+# Copyright (c) 2014, Culham Centre For Fusion Energy
+# All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
+#
+#     * Redistributions of source code must retain the above copyright
+#       notice, this list of conditions and the following disclaimer.
+#
+#     * Redistributions in binary form must reproduce the above copyright
+#       notice, this list of conditions and the following disclaimer in the
+#       documentation and/or other materials provided with the distribution.
+#
+#     * Neither the name of the Culham Centre For Fusion Energy nor the
+#       names of its contributors may be used to endorse or promote products
+#       derived from this software without specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+# ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+# WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+# DISCLAIMED. IN NO EVENT SHALL THE CULHAM CENTRE FOR FUSION ENERGY BE LIABLE FOR
+# ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+# (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+# LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+# ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+# (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+# SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 from libc.string cimport memcpy
 import numpy as np
@@ -50,6 +76,9 @@ __shutdown__ = False
 
 
 cdef _initialise_idl(bint quiet=True):
+    """
+    Initialise the IDL library.
+    """
 
     cdef IDL_INIT_DATA init_data
     global __shutdown__
@@ -72,6 +101,9 @@ cdef _initialise_idl(bint quiet=True):
 
 
 cdef _cleanup_idl():
+    """
+    Shutdown and clean-up the IDL library.
+    """
 
     global __shutdown__
 
@@ -81,6 +113,11 @@ cdef _cleanup_idl():
 
 
 cdef _register():
+    """
+    Registers a user of the IDL library.
+
+    The IDL library is initialised when the first user registers.
+    """
 
     global __references__
     global __shutdown__
@@ -93,6 +130,11 @@ cdef _register():
 
 
 cdef _deregister():
+    """
+    De-registers a user of the IDL library.
+
+    The IDL library is shutdown when all users of the library are de-registered.
+    """
 
     global __references__
     global __shutdown__
@@ -343,7 +385,7 @@ cdef class IDLBridge:
         Sets an IDL variable with python data.
 
         :param variable: A string containing the variable name.
-        :param data: A pythons object containing data to send.
+        :param data: A Python object containing data to send.
         """
 
         cdef IDL_VPTR temp_vptr, dest_vptr
@@ -565,10 +607,48 @@ cdef class IDLBridge:
         IDL_Delvar(vptr)
 
     cpdef object export_function(self, str name):
+        """
+        Wraps an IDL function in an object that behaves like a Python function.
+
+        For example, to gain access to the IDL "sin" function type:
+
+            sin = idl.export_function("sin")
+
+        Use "sin" like an ordinary python function:
+
+            v = sin(0.5)
+
+        Keyword arguments are specified using the normal Python syntax. To provide
+        an IDL "/keyword", simply set the keyword equal to True in python.
+
+            my_idl_function(1.2, 3.4, my_keyword=True)
+
+        :param None: A string specifying the name of the IDL function to wrap.
+        :return: An IDLFunction object.
+        """
 
         return IDLFunction(name, idl_bridge=self)
 
     cpdef object export_procedure(self, str name):
+        """
+        Wraps an IDL procedure in an object that behaves like a Python function.
+
+        For example, to gain access to the IDL "plot" procedure type:
+
+            plot = idl.export_procedure("plot")
+
+        Use "plot" like an ordinary python function:
+
+            plot([1,2,3], [4,5,6])
+
+        Keyword arguments are specified using the normal Python syntax. To provide
+        an IDL "/keyword", simply set the keyword equal to True in python.
+
+            my_idl_procedure(1.2, 3.4, my_keyword=True)
+
+        :param None: A string specifying the name of the IDL procedure to wrap.
+        :return: An IDLProcedure object.
+        """
 
         return IDLProcedure(name, idl_bridge=self)
 

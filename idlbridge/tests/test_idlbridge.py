@@ -1,4 +1,30 @@
-# TODO: add license
+# Copyright (c) 2014, Culham Centre For Fusion Energy
+# All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
+#
+#     * Redistributions of source code must retain the above copyright
+#       notice, this list of conditions and the following disclaimer.
+#
+#     * Redistributions in binary form must reproduce the above copyright
+#       notice, this list of conditions and the following disclaimer in the
+#       documentation and/or other materials provided with the distribution.
+#
+#     * Neither the name of the Culham Centre For Fusion Energy nor the
+#       names of its contributors may be used to endorse or promote products
+#       derived from this software without specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+# ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+# WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+# DISCLAIMED. IN NO EVENT SHALL THE CULHAM CENTRE FOR FUSION ENERGY BE LIABLE FOR
+# ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+# (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+# LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+# ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+# (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+# SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 from unittest import TestCase
 import idlbridge as idl
@@ -28,7 +54,7 @@ class TestIDLBridge(TestCase):
         idl.execute("test_get_missing = 1")
         idl.execute("delvar, test_get_missing")
 
-        with self.assertRaises(idl.IDLValueError):
+        with self.assertRaises(idl._core.IDLValueError):
 
             idl.get("test_get_missing")
 
@@ -360,7 +386,7 @@ class TestIDLBridge(TestCase):
     def test_put_array_empty(self):
 
         # IDL can not handle empty arras
-        with self.assertRaises(idl.IDLValueError):
+        with self.assertRaises(idl._core.IDLValueError):
 
             idl.put("test_put_array_empty", [])
 
@@ -393,7 +419,7 @@ class TestIDLBridge(TestCase):
 
         v = {"alpha": 1, "beta": 2, "Alpha": 3}
 
-        with self.assertRaises(idl.IDLValueError):
+        with self.assertRaises(idl._core.IDLValueError):
 
             idl.put("test_put_structure_bad_keys", v)
 
@@ -401,7 +427,7 @@ class TestIDLBridge(TestCase):
 
         v = {"s": {}}
 
-        with self.assertRaises(idl.IDLValueError):
+        with self.assertRaises(idl._core.IDLValueError):
 
             idl.put("test_put_structure_nested_empty", v)
 
@@ -409,7 +435,7 @@ class TestIDLBridge(TestCase):
 
         idl.execute("test_delete = 5")
         idl.delete("test_delete")
-        with self.assertRaises(idl.IDLValueError):
+        with self.assertRaises(idl._core.IDLValueError):
 
             idl.get("test_delete")
 
