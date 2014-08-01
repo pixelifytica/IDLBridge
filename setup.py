@@ -6,7 +6,9 @@ import numpy
 import os
 import os.path as path
 import platform
-from idlbridge._version import __version__
+
+# set the code version
+__version__ = "v1.0.0rc2"
 
 force = False
 profile = False

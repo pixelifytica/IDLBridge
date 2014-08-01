@@ -36,7 +36,6 @@ exposed in Python and be called like native Python functions.
 
 import ctypes as _ctypes
 from . import _core
-from ._version import __version__
 
 __author__ = 'Dr. Alex Meakins'
 __responsible_officer__ = 'Dr. Alex Meakins'
