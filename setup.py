@@ -6,6 +6,7 @@ import numpy
 import os
 import os.path as path
 import platform
+from idlbridge._version import __version__
 
 force = False
 profile = False
@@ -22,20 +23,20 @@ if "--profile" in sys.argv:
 
 # configure IDL paths
 bits, _ = platform.architecture()
-if bits == '32bit':
+if bits == "32bit":
 
-    machine = 'x86'
+    machine = "x86"
 
-elif bits == '64bit':
+elif bits == "64bit":
 
-    machine = 'x86_64'
+    machine = "x86_64"
 
 else:
 
     raise Exception("Platform type could not be determined.")
 
-idl_library_path = os.environ['IDL_DIR'] + "/bin/bin.linux." + machine
-idl_include_path = os.environ['IDL_DIR'] + "/external/include"
+idl_library_path = os.environ["IDL_DIR"] + "/bin/bin.linux." + machine
+idl_include_path = os.environ["IDL_DIR"] + "/external/include"
 
 # configure include and library paths
 include_dirs = [".", numpy.get_include(), idl_include_path]
@@ -73,4 +74,27 @@ else:
 
     directives = {}
 
-setup(ext_modules=cythonize(extensions, force=force, compiler_directives=directives))
+setup(
+
+    name="idlbridge",
+    version=__version__,
+    description="An IDL wrapper for Python",
+    author='Dr. Alex Meakins',
+    author_email='alex.meakins@ccfe.ac.uk',
+    license="BSD",
+    classifiers=[
+        "Development Status :: 4 - Beta",
+        "Intended Audience :: Science/Research",
+        "License :: OSI Approved :: BSD License",
+        "Programming Language :: Python :: 3",
+        "Programming Language :: Cython",
+        "Programming Language :: Python :: Implementation :: CPython",
+        "Operating System :: POSIX :: Linux",
+        "Topic :: Scientific/Engineering"
+    ],
+    setup_requires="cython > =0.19",
+    install_requires="cython > =0.19",
+    packages=["idlbridge"],
+    ext_modules=cythonize(extensions, force=force, compiler_directives=directives)
+
+)

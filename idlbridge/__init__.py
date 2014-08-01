@@ -27,7 +27,7 @@
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 """
-The idlbridge package allows user to call IDL routines from inside Python.
+Allows users to call IDL routines from inside Python.
 
 This package wraps the IDL callable library and provides a simple user interface
 for passing data between IDL and Python. IDL functions and procedures can be
@@ -36,9 +36,10 @@ exposed in Python and be called like native Python functions.
 
 import ctypes as _ctypes
 from . import _core
+from ._version import __version__
 
-__author__ = 'Dr Alex Meakins'
-__responsible_officer__ = 'Dr Alex Meakins'
+__author__ = 'Dr. Alex Meakins'
+__responsible_officer__ = 'Dr. Alex Meakins'
 
 # By default the core (IDL) library is opened by Python with RTLD_LOCAL
 # preventing subsequently loaded IDL DLM libraries from seeing the IDL_*
@@ -76,7 +77,7 @@ def get(variable):
 
 def put(variable, data):
     """
-    Sets an IDL variable with python data.
+    Sets an IDL variable with Python data.
 
     :param variable: A string containing the variable name.
     :param data: A Python object containing data to send.
@@ -106,12 +107,12 @@ def export_function(name):
 
         sin = idl.export_function("sin")
 
-    Use "sin" like an ordinary python function:
+    Use "sin" like an ordinary Python function:
 
         v = sin(0.5)
 
     Keyword arguments are specified using the normal Python syntax. To provide
-    an IDL "/keyword", simply set the keyword equal to True in python.
+    an IDL "/keyword", simply set the keyword equal to True in Python.
 
         my_idl_function(1.2, 3.4, my_keyword=True)
 
@@ -131,12 +132,12 @@ def export_procedure(name):
 
         plot = idl.export_procedure("plot")
 
-    Use "plot" like an ordinary python function:
+    Use "plot" like an ordinary Python function:
 
         plot([1,2,3], [4,5,6])
 
     Keyword arguments are specified using the normal Python syntax. To provide
-    an IDL "/keyword", simply set the keyword equal to True in python.
+    an IDL "/keyword", simply set the keyword equal to True in Python.
 
         my_idl_procedure(1.2, 3.4, my_keyword=True)
 
