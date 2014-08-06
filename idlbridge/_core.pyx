@@ -570,11 +570,93 @@ cdef class IDLBridge:
 
                 temp_vptr = IDL_GettmpLong64(<IDL_LONG64> data)
 
+        elif isinstance(data, np.int16):
+
+            temp_vptr = IDL_Gettmp()
+            if temp_vptr != NULL:
+
+                temp_vptr.type = IDL_TYP_INT
+                np.PyArray_ScalarAsCtype(data, <void *> &temp_vptr.value.i)
+
+        elif isinstance(data, np.int32):
+
+            temp_vptr = IDL_Gettmp()
+            if temp_vptr != NULL:
+
+                temp_vptr.type = IDL_TYP_LONG
+                np.PyArray_ScalarAsCtype(data, <void *> &temp_vptr.value.l)
+
+        elif isinstance(data, np.int64):
+
+            temp_vptr = IDL_Gettmp()
+            if temp_vptr != NULL:
+
+                temp_vptr.type = IDL_TYP_LONG64
+                np.PyArray_ScalarAsCtype(data, <void *> &temp_vptr.value.l64)
+
+        elif isinstance(data, np.uint8):
+
+            temp_vptr = IDL_Gettmp()
+            if temp_vptr != NULL:
+
+                temp_vptr.type = IDL_TYP_BYTE
+                np.PyArray_ScalarAsCtype(data, <void *> &temp_vptr.value.c)
+
+        elif isinstance(data, np.uint16):
+
+            temp_vptr = IDL_Gettmp()
+            if temp_vptr != NULL:
+
+                temp_vptr.type = IDL_TYP_UINT
+                np.PyArray_ScalarAsCtype(data, <void *> &temp_vptr.value.ui)
+
+        elif isinstance(data, np.uint32):
+
+            temp_vptr = IDL_Gettmp()
+            if temp_vptr != NULL:
+
+                temp_vptr.type = IDL_TYP_ULONG
+                np.PyArray_ScalarAsCtype(data, <void *> &temp_vptr.value.ul)
+
+        elif isinstance(data, np.uint64):
+
+            temp_vptr = IDL_Gettmp()
+            if temp_vptr != NULL:
+
+                temp_vptr.type = IDL_TYP_ULONG64
+                np.PyArray_ScalarAsCtype(data, <void *> &temp_vptr.value.ul64)
+
         elif isinstance(data, float):
 
             temp_vptr = IDL_GettmpFloat(<double> data)
 
-        elif isinstance(data, complex):
+        elif isinstance(data, np.float32):
+
+            temp_vptr = IDL_Gettmp()
+            if temp_vptr != NULL:
+
+                temp_vptr.type = IDL_TYP_FLOAT
+                np.PyArray_ScalarAsCtype(data, <void *> &temp_vptr.value.f)
+
+        elif isinstance(data, np.float64):
+
+            temp_vptr = IDL_Gettmp()
+            if temp_vptr != NULL:
+
+                temp_vptr.type = IDL_TYP_DOUBLE
+                np.PyArray_ScalarAsCtype(data, <void *> &temp_vptr.value.d)
+
+        elif isinstance(data, (complex, np.complex64)):
+
+            # there is no get complex temporary function
+            temp_vptr = IDL_Gettmp()
+            if temp_vptr != NULL:
+
+                temp_vptr.type = IDL_TYP_COMPLEX
+                temp_vptr.value.cmp.r = data.real
+                temp_vptr.value.cmp.i = data.imag
+
+        elif isinstance(data, (complex, np.complex128)):
 
             # there is no get complex temporary function
             temp_vptr = IDL_Gettmp()

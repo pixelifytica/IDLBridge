@@ -292,6 +292,61 @@ class TestIDLBridge(TestCase):
         idl.put("test_put_complex", 2.0+1.0j)
         self.assertEqual(2.0+1.0j, idl.get("test_put_complex"), "Failed to put complex.")
 
+    def test_put_scalar_numpy_int16(self):
+
+        idl.put("test_put_numpy_int16", np.int16(-1574))
+        self.assertEqual(-1574, idl.get("test_put_numpy_int16"), "Failed to put numpy int16.")
+
+    def test_put_scalar_numpy_int32(self):
+
+        idl.put("test_put_numpy_int32", np.int32(-1015574))
+        self.assertEqual(-1015574, idl.get("test_put_numpy_int32"), "Failed to put numpy int32.")
+
+    def test_put_scalar_numpy_int64(self):
+
+        idl.put("test_put_numpy_int64", np.int64(-10156545740))
+        self.assertEqual(-10156545740, idl.get("test_put_numpy_int64"), "Failed to put numpy int64.")
+
+    def test_put_scalar_numpy_uint8(self):
+
+        idl.put("test_put_numpy_uint8", np.uint8(145))
+        self.assertEqual(145, idl.get("test_put_numpy_uint8"), "Failed to put numpy uint8.")
+
+    def test_put_scalar_numpy_uint16(self):
+
+        idl.put("test_put_numpy_uint16", np.uint16(1574))
+        self.assertEqual(1574, idl.get("test_put_numpy_uint16"), "Failed to put numpy uint16.")
+
+    def test_put_scalar_numpy_uint32(self):
+
+        idl.put("test_put_numpy_uint32", np.uint32(1015574))
+        self.assertEqual(1015574, idl.get("test_put_numpy_uint32"), "Failed to put numpy uint32.")
+
+    def test_put_scalar_numpy_uint64(self):
+
+        idl.put("test_put_numpy_uint64", np.int64(10156545740))
+        self.assertEqual(10156545740, idl.get("test_put_numpy_uint64"), "Failed to put numpy uint64.")
+
+    def test_put_scalar_numpy_float32(self):
+
+        idl.put("test_put_numpy_float32", np.float32(1.0))
+        self.assertEqual(1.0, idl.get("test_put_numpy_float32"), "Failed to put numpy float32.")
+
+    def test_put_scalar_numpy_float64(self):
+
+        idl.put("test_put_numpy_float64", np.float64(-1.0))
+        self.assertEqual(-1.0, idl.get("test_put_numpy_float64"), "Failed to put numpy float64.")
+
+    def test_put_scalar_numpy_complex64(self):
+
+        idl.put("test_put_numpy_complex64", np.complex64(2.0+1.0j))
+        self.assertEqual(2.0+1.0j, idl.get("test_put_numpy_complex64"), "Failed to put numpy complex64.")
+
+    def test_put_scalar_numpy_complex128(self):
+
+        idl.put("test_put_numpy_complex128", np.complex128(2.0-1.0j))
+        self.assertEqual(2.0-1.0j, idl.get("test_put_numpy_complex128"), "Failed to put numpy complex128.")
+
     def test_put_string(self):
 
         idl.put("test_put_string", "test")
