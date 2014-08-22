@@ -412,6 +412,16 @@ cdef class IDLBridge:
 
         IDL_VarCopy(vptr, temp_vptr)
 
+        # check pointer is not NULL
+        if self._is_null_pointer(temp_name):
+
+            # clean up
+            self.delete("{}".format(temp_name))
+            self.delete("{}content_".format(temp_name))
+            self.execute("_idlbridge_pointer_count_ -= 1")
+
+            return None
+
         # dereference the pointer using temporary to move the content
         self.execute("{}content_ = temporary(*{})".format(temp_name, temp_name))
 
@@ -427,6 +437,15 @@ cdef class IDLBridge:
         self.execute("_idlbridge_pointer_count_ -= 1")
 
         return data
+
+    cdef inline bint _is_null_pointer(self, str variable):
+
+        self.execute("_idlbridge_is_null_ = 0 & if {} eq ptr_new() then _idlbridge_is_null_ = 1".format(variable))
+        if self.get("_idlbridge_is_null_") == 1:
+
+            return True
+
+        return False
 
     cpdef object put(self, str variable, object data):
         """

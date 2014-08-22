@@ -281,7 +281,6 @@ class TestIDLBridge(TestCase):
 
         self.assertEqual(v, r, "Failed to dereference pointer.")
 
-
     def test_get_pointer_chain(self):
 
         # 3 chained pointers
@@ -300,6 +299,15 @@ class TestIDLBridge(TestCase):
         v = {"p": 159}
 
         self.assertEqual(v, r, "Failed to dereference pointer nested into structure.")
+
+    def test_get_pointer_null(self):
+
+        idl.execute("test_get_pointer_null = ptr_new()")
+        r = idl.get("test_get_pointer_null")
+
+        v = None
+
+        self.assertEqual(v, r, "Failed to dereference null pointer.")
 
     def test_put_scalar_int(self):
 
