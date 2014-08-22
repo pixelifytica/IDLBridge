@@ -191,7 +191,7 @@ cdef class IDLBridge:
 
         if vptr == NULL or vptr.type == IDL_TYP_UNDEF:
 
-            raise IDLValueError("Variable {} not found.".format(variable.upper()))
+            raise IDLValueError("IDL Variable {} not found.".format(variable.upper()))
 
         # decode and return the IDL_Variable
         return self._get(vptr)
@@ -229,11 +229,11 @@ cdef class IDLBridge:
         elif vptr.type == IDL_TYP_STRING: return self._string_idl_to_py(vptr.value.str)
         elif vptr.type == IDL_TYP_PTR:
 
-            raise NotImplementedError("Pointer types are not supported.")
+            return self._get_pointer(vptr)
 
         elif vptr.type == IDL_TYP_OBJREF:
 
-            raise NotImplementedError("Object types are not supported.")
+            raise NotImplementedError("IDL object types are not supported.")
 
         else:
 
@@ -304,7 +304,7 @@ cdef class IDLBridge:
 
     cdef inline np.ndarray _get_array_structure(self, IDL_VPTR vptr):
 
-        raise NotImplementedError("Arrays of structures are not supported.")
+        raise NotImplementedError("Arrays of IDL structures are not supported.")
 
     cdef inline np.ndarray _get_array_scalar(self, IDL_VPTR vptr):
         """
@@ -381,6 +381,53 @@ cdef class IDLBridge:
 
         return result
 
+    cdef inline object _get_pointer(self, IDL_VPTR vptr):
+
+        cdef:
+
+            IDL_VPTR temp_vptr
+
+        # The IDL c-api does not provide functions for handling pointer types, the documentation
+        # says you must use user space tools. This is slow and horrible, thanks IDL developers <3.
+
+        # Generate a unique temporary variable name.
+        # To do this we store an id number in an IDL variable and increment it for each pointer handled
+        # This code will fail if there are more temporary pointers than an unsigned long can uniquely
+        # reference. I suspect IDL will fail long before that point.
+        self.execute("if ~ isa(_idlbridge_pointer_count_) then _idlbridge_pointer_count_ = 0ul")
+        self.execute("_idlbridge_pointer_count_ += 1")
+        temp_id = self.get("_idlbridge_pointer_count_")
+        temp_name = "_idlbridge_pointer_{id}_".format(id=temp_id)
+
+        # Copy (anonymous) pointer variable to a known variable.
+        # There is no way to get the variable name for pointers embedded in structures so we need to
+        # copy the vptr to a new variable. We need a variable name we can access for de-referencing.
+        byte_string = temp_name.encode("UTF8")
+        temp_vptr = IDL_FindNamedVariable(byte_string, True)
+
+        if temp_vptr == NULL:
+
+            self.execute("_idlbridge_pointer_count_ -= 1")
+            raise IDLLibraryError("Could not allocate IDL variable.")
+
+        IDL_VarCopy(vptr, temp_vptr)
+
+        # dereference the pointer using temporary to move the content
+        self.execute("{}content_ = temporary(*{})".format(temp_name, temp_name))
+
+        # get data from de-referenced variable
+        data = self.get("{}content_".format(temp_name))
+
+        # restore the pointer content, this unsets the content variable
+        self.execute("*{} = temporary({}content_)".format(temp_name, temp_name))
+
+        # clean up
+        self.delete("{}".format(temp_name))
+        self.delete("{}content_".format(temp_name))
+        self.execute("_idlbridge_pointer_count_ -= 1")
+
+        return data
+
     cpdef object put(self, str variable, object data):
         """
         Sets an IDL variable with python data.
@@ -416,7 +463,7 @@ cdef class IDLBridge:
 
         if dest_vptr == NULL:
 
-            raise IDLLibraryError("Could not allocate variable.")
+            raise IDLLibraryError("Could not allocate IDL variable.")
 
         # populate variable with new data
         IDL_VarCopy(temp_vptr, dest_vptr)
@@ -461,7 +508,7 @@ cdef class IDLBridge:
                 # IDL can not handle empty structures as leaves in a tree
                 if not item:
 
-                    raise IDLValueError("IDL cannot handle empty structures nested inside a structure.")
+                    raise IDLValueError("IDL cannot handle empty structures nested inside another structure.")
 
                 self.execute("_idlbridge_depth_ = _idlbridge_depth_ + 1")
                 self._build_idl_structure(tempvar, item)
@@ -515,7 +562,7 @@ cdef class IDLBridge:
         num_dimensions = np.PyArray_NDIM(data)
         if num_dimensions > IDL_MAX_ARRAY_DIM:
 
-            raise IDLValueError("Array contains more dimensions than IDL can handle ({} dimensions).".format(num_dimensions))
+            raise IDLValueError("Array contains more dimensions than IDL can handle (array has {} dimensions, IDL maximum is {}).".format(num_dimensions, IDL_MAX_ARRAY_DIM))
 
         self._dimensions_numpy_to_idl(dimensions, num_dimensions, np.PyArray_DIMS(data))
 
@@ -524,7 +571,7 @@ cdef class IDLBridge:
 
         if temp_vptr == NULL:
 
-            raise IDLLibraryError("Could not allocate variable.")
+            raise IDLLibraryError("Could not allocate IDL variable.")
 
         # string type requires special handling
         if np.PyArray_ISSTRING(data):
@@ -673,11 +720,14 @@ cdef class IDLBridge:
 
         else:
 
-            raise TypeError("Unsupported python type.")
+            raise TypeError("Unsupported Python type. The following python and numpy types are supported: "
+                            + "int, float, complex, str, list, dict, "
+                            + "int16, int32, int64, uint8, uint16, uint32,"
+                            + " uint64, float32, float64, complex64, complex128, ndarray.")
 
         if temp_vptr == NULL:
 
-            raise IDLLibraryError("Could not allocate variable.")
+            raise IDLLibraryError("Could not allocate IDL variable.")
 
         return temp_vptr
 
@@ -689,16 +739,7 @@ cdef class IDLBridge:
         :return: None
         """
 
-        cdef IDL_VPTR vptr
-
-        byte_string = variable.encode("UTF8")
-        vptr = IDL_FindNamedVariable(byte_string, False)
-
-        if vptr == NULL or vptr.type == IDL_TYP_UNDEF:
-
-            raise IDLValueError("Variable {} not found.".format(variable.upper()))
-
-        IDL_Delvar(vptr)
+        self.execute("delvar, {}".format(variable))
 
     cpdef object export_function(self, str name):
         """
@@ -786,7 +827,7 @@ cdef class IDLBridge:
 
         else:
 
-            raise IDLTypeError("No matching Numpy data type defined for given IDL type.")
+            raise IDLTypeError("No matching numpy data type defined for given IDL type.")
 
     cdef inline int _type_numpy_to_idl(self, int type) except *:
         """
@@ -815,7 +856,7 @@ cdef class IDLBridge:
 
         else:
 
-            raise IDLTypeError("No matching IDL data type defined for given Numpy type.")
+            raise IDLTypeError("No matching IDL data type defined for given numpy type.")
 
     cdef inline void _dimensions_idl_to_numpy(self, np.npy_intp *numpy_dimensions, int dimension_count, IDL_ARRAY_DIM idl_dimensions):
         """

@@ -272,10 +272,34 @@ class TestIDLBridge(TestCase):
         idl.execute("test_get_string_normal = \"this is a test string\"")
         self.assertEqual("this is a test string", idl.get("test_get_string_normal"), "Failed to get normal string.")
 
-    # TODO: write me!
-    # def test_get_pointer(self):
-    #
-    #     pass
+    def test_get_pointer_simple(self):
+
+        idl.execute("test_get_pointer_simple = ptr_new(1234)")
+        r = idl.get("test_get_pointer_simple")
+
+        v = 1234
+
+        self.assertEqual(v, r, "Failed to dereference pointer.")
+
+
+    def test_get_pointer_chain(self):
+
+        # 3 chained pointers
+        idl.execute("test_get_pointer_chain = ptr_new(ptr_new(ptr_new(5678)))")
+        r = idl.get("test_get_pointer_chain")
+
+        v = 5678
+
+        self.assertEqual(v, r, "Failed to dereference chained pointers.")
+
+    def test_get_pointer_structure(self):
+
+        idl.execute("test_get_pointer_structure = {p: ptr_new(159)}")
+        r = idl.get("test_get_pointer_structure")
+
+        v = {"p": 159}
+
+        self.assertEqual(v, r, "Failed to dereference pointer nested into structure.")
 
     def test_put_scalar_int(self):
 
@@ -494,12 +518,12 @@ class TestIDLBridge(TestCase):
 
             idl.get("test_delete")
 
-    # TODO: write me!
+    # TODO: figure out the best way to test
     # def test_function(self):
     #
     #     pass
 
-    # TODO: write me!
+    # TODO: figure out the best way to test
     # def test_procedure(self):
     #
     #     pass

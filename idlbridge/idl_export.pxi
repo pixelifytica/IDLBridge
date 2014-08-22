@@ -269,3 +269,5 @@ cdef extern from "idl_export.h":
     char *IDL_MakeTempStruct(IDL_StructDefPtr sdef, int n_dim, IDL_MEMINT *dim, IDL_VPTR *var, int zero) nogil
 
     IDL_StructDefPtr IDL_MakeStruct(char *name, IDL_STRUCT_TAG_DEF *tags) nogil
+
+    char *IDL_VarName(IDL_VPTR v) nogil
