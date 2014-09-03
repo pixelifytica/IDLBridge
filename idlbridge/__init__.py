@@ -39,6 +39,7 @@ from . import _core
 
 __author__ = 'Dr. Alex Meakins'
 __responsible_officer__ = 'Dr. Alex Meakins'
+__version__ = "1.0.0"
 
 # By default the core (IDL) library is opened by Python with RTLD_LOCAL
 # preventing subsequently loaded IDL DLM libraries from seeing the IDL_*
