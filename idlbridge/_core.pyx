@@ -417,7 +417,6 @@ cdef class IDLBridge:
 
             # clean up
             self.delete("{}".format(temp_name))
-            self.delete("{}content_".format(temp_name))
             self.execute("_idlbridge_pointer_count_ -= 1")
 
             return None

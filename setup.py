@@ -8,7 +8,7 @@ import os.path as path
 import platform
 
 # set the code version
-__version__ = "v1.0.0rc4"
+__version__ = "1.0.0"
 
 force = False
 profile = False
