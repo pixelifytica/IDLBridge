@@ -83,11 +83,10 @@ setup(
     description="An IDL wrapper for Python",
     author='Dr. Alex Meakins',
     author_email='alex.meakins@ccfe.ac.uk',
-    license="BSD",
+    license="Copyright CCFE",
     classifiers=[
         "Development Status :: 4 - Beta",
         "Intended Audience :: Science/Research",
-        "License :: OSI Approved :: BSD License",
         "Programming Language :: Python :: 3",
         "Programming Language :: Cython",
         "Programming Language :: Python :: Implementation :: CPython",
