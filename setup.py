@@ -8,33 +8,26 @@ import os.path as path
 import platform
 
 # set the code version
-__version__ = "1.0.0"
+__version__ = "1.1.0"
 
 force = False
 profile = False
 
 if "--force" in sys.argv:
-
     force = True
     del sys.argv[sys.argv.index("--force")]
 
 if "--profile" in sys.argv:
-
     profile = True
     del sys.argv[sys.argv.index("--profile")]
 
 # configure IDL paths
 bits, _ = platform.architecture()
 if bits == "32bit":
-
     machine = "x86"
-
 elif bits == "64bit":
-
     machine = "x86_64"
-
 else:
-
     raise Exception("Platform type could not be determined.")
 
 idl_library_path = os.environ["IDL_DIR"] + "/bin/bin.linux." + machine
@@ -52,14 +45,10 @@ setup_path = path.dirname(path.abspath(__file__))
 # build extension list
 extensions = []
 for root, dirs, files in os.walk(setup_path):
-
     for file in files:
-
         if path.splitext(file)[1] == ".pyx":
-
             pyx_file = path.relpath(path.join(root, file), setup_path)
             module = path.splitext(pyx_file)[0].replace("/", ".")
-
             extensions.append(Extension(module,
                                         [pyx_file],
                                         include_dirs=include_dirs,
@@ -69,15 +58,11 @@ for root, dirs, files in os.walk(setup_path):
                                         extra_link_args=extra_link_args))
 
 if profile:
-
     directives = {"profile": True}
-
 else:
-
     directives = {}
 
 setup(
-
     name="idlbridge",
     version=__version__,
     description="An IDL wrapper for Python",
@@ -87,6 +72,7 @@ setup(
     classifiers=[
         "Development Status :: 4 - Beta",
         "Intended Audience :: Science/Research",
+#        "License :: OSI Approved :: BSD License",
         "Programming Language :: Python :: 3",
         "Programming Language :: Cython",
         "Programming Language :: Python :: Implementation :: CPython",
@@ -97,5 +83,4 @@ setup(
     # install_requires="cython > =0.19",
     packages=["idlbridge"],
     ext_modules=cythonize(extensions, force=force, compiler_directives=directives)
-
 )

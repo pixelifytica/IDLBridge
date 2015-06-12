@@ -27,7 +27,6 @@ class IDLTypeError(TypeError):
     This exception is thrown when a data type is passed to the IDL library that
     it is unable to handle.
     """
-
     pass
 
 
@@ -55,17 +54,19 @@ cdef _initialise_idl(bint quiet=True):
 
     cdef IDL_INIT_DATA init_data
     global __shutdown__
-
     if not __shutdown__:
 
         # initialise the IDL library
         init_data.options = IDL_INIT_NOCMDLINE #IDL_INIT_BACKGROUND
-
         if quiet:
-
             init_data.options |= IDL_INIT_QUIET
-
         v = IDL_Initialize(&init_data)
+
+        # We have encountered an odd issue with IDL where it occasionally consumes (without executing) the first command
+        # it is sent. This occurs whenever the user sets a IDL_STARTUP environment variable to point to an idl startup
+        # script. The cause of this is unknown. To prevent this being a problem for the users we execute a null command
+        # when the IDL library is initialised.
+        IDL_ExecuteStr("MESSAGE, /RESET")
 
     else:
 
@@ -79,9 +80,7 @@ cdef _cleanup_idl():
     """
 
     global __shutdown__
-
     if not __shutdown__:
-
         IDL_Cleanup(True)
 
 
@@ -94,11 +93,8 @@ cdef _register():
 
     global __references__
     global __shutdown__
-
     if __references__ == 0:
-
         _initialise_idl()
-
     __references__ += 1
 
 
@@ -111,11 +107,8 @@ cdef _deregister():
 
     global __references__
     global __shutdown__
-
     __references__ -= 1
-
     if __references__ <= 0:
-
         _cleanup_idl()
 
 
@@ -162,7 +155,6 @@ cdef class IDLBridge:
         vptr = IDL_FindNamedVariable(byte_string, False)
 
         if vptr == NULL or vptr.type == IDL_TYP_UNDEF:
-
             raise IDLValueError("IDL Variable {} not found.".format(variable.upper()))
 
         # decode and return the IDL_Variable
@@ -178,15 +170,10 @@ cdef class IDLBridge:
 
         # identify variable type and translate to python
         if vptr.flags & IDL_V_ARR:
-
             if vptr.flags & IDL_V_STRUCT:
-
                 return self._get_structure(vptr)
-
             else:
-
                 return self._get_array(vptr)
-
         elif vptr.type == IDL_TYP_BYTE: return vptr.value.c
         elif vptr.type == IDL_TYP_INT: return vptr.value.i
         elif vptr.type == IDL_TYP_UINT: return vptr.value.ui
@@ -200,15 +187,10 @@ cdef class IDLBridge:
         elif vptr.type == IDL_TYP_DCOMPLEX: return complex(vptr.value.dcmp.r, vptr.value.dcmp.i)
         elif vptr.type == IDL_TYP_STRING: return self._string_idl_to_py(vptr.value.str)
         elif vptr.type == IDL_TYP_PTR:
-
             return self._get_pointer(vptr)
-
         elif vptr.type == IDL_TYP_OBJREF:
-
             raise NotImplementedError("IDL object types are not supported.")
-
         else:
-
             raise IDLTypeError("Unrecognised IDL type.")
 
     cdef inline np.ndarray _get_array(self, IDL_VPTR vptr):
@@ -223,15 +205,10 @@ cdef class IDLBridge:
 
         # Different array types unfortunately need special handling.
         if vptr.type == IDL_TYP_STRING:
-
             return self._get_array_string(vptr)
-
         elif vptr.type == IDL_TYP_STRUCT:
-
             return self._get_array_structure(vptr)
-
         else:
-
             return self._get_array_scalar(vptr)
 
     cdef inline np.ndarray _get_array_string(self, IDL_VPTR vptr):
@@ -376,21 +353,16 @@ cdef class IDLBridge:
         # copy the vptr to a new variable. We need a variable name we can access for de-referencing.
         byte_string = temp_name.encode("UTF8")
         temp_vptr = IDL_FindNamedVariable(byte_string, True)
-
         if temp_vptr == NULL:
-
             self.execute("_idlbridge_pointer_count_ -= 1")
             raise IDLLibraryError("Could not allocate IDL variable.")
 
         IDL_VarCopy(vptr, temp_vptr)
 
-        # check pointer is not NULL
+        # check pointer is not NULL, if so then clean up
         if self._is_null_pointer(temp_name):
-
-            # clean up
             self.delete("{}".format(temp_name))
             self.execute("_idlbridge_pointer_count_ -= 1")
-
             return None
 
         # dereference the pointer using temporary to move the content
@@ -413,9 +385,7 @@ cdef class IDLBridge:
 
         self.execute("_idlbridge_is_null_ = 0 & if {} eq ptr_new() then _idlbridge_is_null_ = 1".format(variable))
         if self.get("_idlbridge_is_null_") == 1:
-
             return True
-
         return False
 
     cpdef object put(self, str variable, object data):
@@ -430,29 +400,22 @@ cdef class IDLBridge:
 
         # add support for lists by converting them to ndarrays
         if isinstance(data, list):
-
             data = np.array(data)
 
         # call the appropriate type handler
         if isinstance(data, dict):
-
             self._put_structure(variable, data)
             return
 
         elif isinstance(data, np.ndarray):
-
             temp_vptr = self._put_array(variable, data)
-
         else:
-
             temp_vptr = self._put_scalar(variable, data)
 
         # create/locate IDL variable
         byte_string = variable.encode("UTF8")
         dest_vptr = IDL_FindNamedVariable(byte_string, True)
-
         if dest_vptr == NULL:
-
             raise IDLLibraryError("Could not allocate IDL variable.")
 
         # populate variable with new data
@@ -483,21 +446,17 @@ cdef class IDLBridge:
         # Unlike python dictionary keys, IDL structure tags are case-insensitive.
         # Converting the keys to tags could result in duplicate names, this must be prevented.
         if not self._tags_unique(data):
-
             raise IDLValueError("Duplicate tag (key) name found. IDL structure tags are case insensitive and must be unique.")
 
         # create blank structure
         self.execute("{name} = {{}}".format(name=name))
-
         tempvar = "_idlbridge_v{depth}_".format(depth=self.get("_idlbridge_depth_"))
-
         for key, item in data.items():
 
             if isinstance(item, dict):
 
                 # IDL can not handle empty structures as leaves in a tree
                 if not item:
-
                     raise IDLValueError("IDL cannot handle empty structures nested inside another structure.")
 
                 self.execute("_idlbridge_depth_ = _idlbridge_depth_ + 1")
@@ -518,7 +477,6 @@ cdef class IDLBridge:
             int index
 
         if len(data) < 2:
-
             return True
 
         # extract keys as a list, make lower case and sort
@@ -528,11 +486,8 @@ cdef class IDLBridge:
         # if keys are duplicated, they will be adjacent due to the sort
         # step through comparing adjacent keys
         for index in range(len(keys) - 1):
-
             if keys[index] == keys[index + 1]:
-
                 return False
-
         return True
 
     cdef inline IDL_VPTR _put_array(self, str variable, np.ndarray data) except *:
@@ -545,22 +500,18 @@ cdef class IDLBridge:
             void *array_data
 
         if np.PyArray_SIZE(data) == 0:
-
             raise IDLValueError("IDL cannot handle empty arrays.")
 
         # convert dimensions to IDL
         num_dimensions = np.PyArray_NDIM(data)
         if num_dimensions > IDL_MAX_ARRAY_DIM:
-
             raise IDLValueError("Array contains more dimensions than IDL can handle (array has {} dimensions, IDL maximum is {}).".format(num_dimensions, IDL_MAX_ARRAY_DIM))
 
         self._dimensions_numpy_to_idl(dimensions, num_dimensions, np.PyArray_DIMS(data))
 
         # create temporary array and copy data
         temp_vptr = IDL_Gettmp()
-
         if temp_vptr == NULL:
-
             raise IDLLibraryError("Could not allocate IDL variable.")
 
         # string type requires special handling
@@ -573,7 +524,6 @@ cdef class IDLBridge:
 
             # convert strings to IDL_Strings
             for index in range(np.PyArray_SIZE(data)):
-
                 byte_string = data[index].encode("UTF8")
                 IDL_StrStore(&(<IDL_STRING *> array_data)[index], byte_string)
 
@@ -581,7 +531,6 @@ cdef class IDLBridge:
 
             # obtain IDL type
             type = self._type_numpy_to_idl(np.PyArray_TYPE(data))
-
             array_data = <void *> IDL_MakeTempArray(type, num_dimensions, dimensions, IDL_ARR_INI_NOP, &temp_vptr)
             memcpy(array_data, np.PyArray_DATA(data), np.PyArray_NBYTES(data))
 
@@ -596,22 +545,16 @@ cdef class IDLBridge:
 
             # select an int of the appropriate size (min int16)
             if -32768 <= data <= 32767:
-
                 temp_vptr = IDL_GettmpInt(<IDL_INT> data)
-
             elif -2147483648 <= data <= 2147483647:
-
                 temp_vptr = IDL_GettmpLong(<IDL_LONG> data)
-
             else:
-
                 temp_vptr = IDL_GettmpLong64(<IDL_LONG64> data)
 
         elif isinstance(data, np.int16):
 
             temp_vptr = IDL_Gettmp()
             if temp_vptr != NULL:
-
                 temp_vptr.type = IDL_TYP_INT
                 np.PyArray_ScalarAsCtype(data, <void *> &temp_vptr.value.i)
 
@@ -619,7 +562,6 @@ cdef class IDLBridge:
 
             temp_vptr = IDL_Gettmp()
             if temp_vptr != NULL:
-
                 temp_vptr.type = IDL_TYP_LONG
                 np.PyArray_ScalarAsCtype(data, <void *> &temp_vptr.value.l)
 
@@ -627,7 +569,6 @@ cdef class IDLBridge:
 
             temp_vptr = IDL_Gettmp()
             if temp_vptr != NULL:
-
                 temp_vptr.type = IDL_TYP_LONG64
                 np.PyArray_ScalarAsCtype(data, <void *> &temp_vptr.value.l64)
 
@@ -635,7 +576,6 @@ cdef class IDLBridge:
 
             temp_vptr = IDL_Gettmp()
             if temp_vptr != NULL:
-
                 temp_vptr.type = IDL_TYP_BYTE
                 np.PyArray_ScalarAsCtype(data, <void *> &temp_vptr.value.c)
 
@@ -643,7 +583,6 @@ cdef class IDLBridge:
 
             temp_vptr = IDL_Gettmp()
             if temp_vptr != NULL:
-
                 temp_vptr.type = IDL_TYP_UINT
                 np.PyArray_ScalarAsCtype(data, <void *> &temp_vptr.value.ui)
 
@@ -651,7 +590,6 @@ cdef class IDLBridge:
 
             temp_vptr = IDL_Gettmp()
             if temp_vptr != NULL:
-
                 temp_vptr.type = IDL_TYP_ULONG
                 np.PyArray_ScalarAsCtype(data, <void *> &temp_vptr.value.ul)
 
@@ -659,7 +597,6 @@ cdef class IDLBridge:
 
             temp_vptr = IDL_Gettmp()
             if temp_vptr != NULL:
-
                 temp_vptr.type = IDL_TYP_ULONG64
                 np.PyArray_ScalarAsCtype(data, <void *> &temp_vptr.value.ul64)
 
@@ -671,7 +608,6 @@ cdef class IDLBridge:
 
             temp_vptr = IDL_Gettmp()
             if temp_vptr != NULL:
-
                 temp_vptr.type = IDL_TYP_FLOAT
                 np.PyArray_ScalarAsCtype(data, <void *> &temp_vptr.value.f)
 
@@ -679,7 +615,6 @@ cdef class IDLBridge:
 
             temp_vptr = IDL_Gettmp()
             if temp_vptr != NULL:
-
                 temp_vptr.type = IDL_TYP_DOUBLE
                 np.PyArray_ScalarAsCtype(data, <void *> &temp_vptr.value.d)
 
@@ -688,7 +623,6 @@ cdef class IDLBridge:
             # there is no get complex temporary function
             temp_vptr = IDL_Gettmp()
             if temp_vptr != NULL:
-
                 temp_vptr.type = IDL_TYP_COMPLEX
                 temp_vptr.value.cmp.r = data.real
                 temp_vptr.value.cmp.i = data.imag
@@ -698,7 +632,6 @@ cdef class IDLBridge:
             # there is no get complex temporary function
             temp_vptr = IDL_Gettmp()
             if temp_vptr != NULL:
-
                 temp_vptr.type = IDL_TYP_DCOMPLEX
                 temp_vptr.value.dcmp.r = data.real
                 temp_vptr.value.dcmp.i = data.imag
@@ -716,7 +649,6 @@ cdef class IDLBridge:
                             + " uint64, float32, float64, complex64, complex128, ndarray.")
 
         if temp_vptr == NULL:
-
             raise IDLLibraryError("Could not allocate IDL variable.")
 
         return temp_vptr
@@ -787,11 +719,8 @@ cdef class IDLBridge:
 
         # The string pointer in the IDL string structure is invalid when the string length is zero.
         if string.slen == 0:
-
             return ""
-
         else:
-
             return string.s.decode("UTF8")
 
     cdef inline int _type_idl_to_numpy(self, int type) except *:
@@ -814,9 +743,7 @@ cdef class IDLBridge:
         elif type == IDL_TYP_COMPLEX: return np.NPY_COMPLEX64
         elif type == IDL_TYP_DCOMPLEX: return np.NPY_COMPLEX128
         elif type == IDL_TYP_STRING: return np.NPY_STRING
-
         else:
-
             raise IDLTypeError("No matching numpy data type defined for given IDL type.")
 
     cdef inline int _type_numpy_to_idl(self, int type) except *:
@@ -828,9 +755,7 @@ cdef class IDLBridge:
         """
 
         if type == np.NPY_INT8:
-
             raise IDLTypeError("IDL does not support signed bytes.")
-
         elif type == np.NPY_INT16: return IDL_TYP_INT
         elif type == np.NPY_INT32: return IDL_TYP_LONG
         elif type == np.NPY_INT64: return IDL_TYP_LONG64
@@ -843,9 +768,7 @@ cdef class IDLBridge:
         elif type == np.NPY_COMPLEX64: return IDL_TYP_COMPLEX
         elif type == np.NPY_COMPLEX128: return IDL_TYP_DCOMPLEX
         elif type == np.NPY_STRING: return IDL_TYP_STRING
-
         else:
-
             raise IDLTypeError("No matching IDL data type defined for given numpy type.")
 
     cdef inline void _dimensions_idl_to_numpy(self, np.npy_intp *numpy_dimensions, int dimension_count, IDL_ARRAY_DIM idl_dimensions):
@@ -860,7 +783,6 @@ cdef class IDLBridge:
 
         # IDL defines its dimensions with the opposite order to numpy, invert the order
         for index in range(dimension_count):
-
             numpy_dimensions[index] = idl_dimensions[dimension_count - (index + 1)]
 
     cdef inline void _dimensions_numpy_to_idl(self, IDL_MEMINT *idl_dimensions, int dimension_count, np.npy_intp *numpy_dimensions):
@@ -875,16 +797,19 @@ cdef class IDLBridge:
 
         # IDL defines its dimensions with the opposite order to numpy, invert the order
         for index in range(dimension_count):
-
             idl_dimensions[index] = numpy_dimensions[dimension_count - (index + 1)]
 
 
+# TODO: NEED TO PASS ARGUMENTS BACK TO PYTHON!!!!!!! add option to init that when set returns arguements packed in a tuple with return value at the start
+# TODO: add return_arguments boolean option
+
 class _IDLCallable:
 
-    def __init__(self, name, idl_bridge=IDLBridge()):
+    def __init__(self, name, idl_bridge=IDLBridge(), return_arguments=False):
 
         self.name = name
         self._idl = idl_bridge
+        self._return_arguments = return_arguments
 
     def _process_arguments(self, arguments, temporary_variables):
 
@@ -938,9 +863,8 @@ class IDLFunction(_IDLCallable):
         return_variable = "_idlbridge_return"
         command = "{rtnvar} = {name}({arg}".format(rtnvar=return_variable, name=self.name, arg=argument_fragment)
 
+        # need an extra comma to separate arguments from keywords if both present
         if argument_fragment and keyword_fragment:
-
-            # need an extra comma to separate arguments from keywords
             command += ", "
 
         command += "{key})".format(key=keyword_fragment)
@@ -951,9 +875,7 @@ class IDLFunction(_IDLCallable):
 
         # clean up
         for variable in temporary_variables:
-
             self._idl.delete(variable)
-
         self._idl.delete(return_variable)
 
         return data
@@ -974,9 +896,8 @@ class IDLProcedure(_IDLCallable):
 
             command = "{name}, {arg}".format(name=self.name, arg=argument_fragment)
 
+            # need an extra comma to separate arguments from keywords if present
             if argument_fragment and keyword_fragment:
-
-                # need an extra comma to separate arguments from keywords
                 command += ", "
 
             command += keyword_fragment
@@ -990,7 +911,6 @@ class IDLProcedure(_IDLCallable):
 
         # clean up
         for variable in temporary_variables:
-
             self._idl.delete(variable)
 
 
