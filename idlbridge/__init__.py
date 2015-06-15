@@ -70,7 +70,7 @@ def delete(variable):
     global __bridge__
     __bridge__.delete(variable)
 
-# todo: update docstring
+
 def export_function(name, return_arguments=None):
     """
     Wraps an IDL function in an object that behaves like a Python function.
@@ -88,14 +88,48 @@ def export_function(name, return_arguments=None):
 
         my_idl_function(1.2, 3.4, my_keyword=True)
 
-    :param None: A string specifying the name of the IDL function to wrap.
+    IDL supports pass by reference, which allows the function to modify the
+    value of variables supplied to the function. Python does not support
+    pass by reference. To provide access to modified arguments, a
+    return_arguments parameter is provided. The return_arguments parameter
+    expects a list of indices, corresponding to the location of the
+    argument to return. Selected arguments will be packed into a tuple
+    with the return value and returned by the function.
+
+    For example:
+
+        my_func = idl.export_function("my_func", returned_arguments=[0, 3])
+
+    specifies that the first argument and the fourth argument are to be
+    returned along with the return value i.e. my_func will return a tuple
+    containing:
+
+        (return_value, argument_0, argument_3)
+
+    This means it is possible to call the IDL function like a similarly
+    defined Python function:
+
+        v, a, d = my_func(a, b, c, d, e)
+
+    If any arguments specified for return are not used due to being optional
+    arguments, the value of any unused arguments will be set to None.
+
+    For example, if:
+
+        v, a, d = my_func(a, b)
+
+    then d would be set to None.
+
+    :param name: A string specifying the name of the IDL function to wrap.
+    :param return_arguments: A list object containing the index of
+    arguments to return.
     :return: An IDLFunction object.
     """
 
     global __bridge__
     return __bridge__.export_function(name, return_arguments)
 
-# todo: update docstring
+
 def export_procedure(name, return_arguments=None):
     """
     Wraps an IDL procedure in an object that behaves like a Python function.
@@ -113,11 +147,42 @@ def export_procedure(name, return_arguments=None):
 
         my_idl_procedure(1.2, 3.4, my_keyword=True)
 
+    IDL supports pass by reference, which allows the procedure to modify the
+    value of variables supplied to the procedure. Python does not support
+    pass by reference. To provide access to modified arguments, a
+    return_arguments parameter is provided. The return_arguments parameter
+    expects a list of indices, corresponding to the location of the
+    argument to return. Selected arguments will be packed into a tuple
+    and returned by the procedure.
+
+    For example:
+
+        my_pro = idl.export_procedure("my_pro", returned_arguments=[0, 3])
+
+    specifies that the first argument and the fourth argument are to be
+    returned i.e. my_pro will return a tuple containing:
+
+        (argument_0, argument_3)
+
+    This means it is possible to call the IDL procedure like a similarly
+    defined Python function:
+
+        a, d = my_pro(a, b, c, d, e)
+
+    If any arguments specified for return are not used due to being optional
+    arguments, the value of any unused arguments will be set to None.
+
+    For example, if:
+
+        a, d = my_pro(a, b)
+
+    then d would be set to None.
+
     :param None: A string specifying the name of the IDL procedure to wrap.
+    :param return_arguments: A list object containing the index of
+    arguments to return.
     :return: An IDLProcedure object.
     """
 
     global __bridge__
     return __bridge__.export_procedure(name, return_arguments)
-
-
