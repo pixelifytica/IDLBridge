@@ -663,7 +663,8 @@ cdef class IDLBridge:
 
         self.execute("delvar, {}".format(variable))
 
-    cpdef object export_function(self, str name):
+    # TODO: update docstring
+    cpdef object export_function(self, str name, list return_arguments=None):
         """
         Wraps an IDL function in an object that behaves like a Python function.
 
@@ -684,9 +685,10 @@ cdef class IDLBridge:
         :return: An IDLFunction object.
         """
 
-        return IDLFunction(name, idl_bridge=self)
+        return IDLFunction(name, return_arguments, idl_bridge=self)
 
-    cpdef object export_procedure(self, str name):
+    # TODO: update docstring
+    cpdef object export_procedure(self, str name, list return_arguments=None):
         """
         Wraps an IDL procedure in an object that behaves like a Python function.
 
@@ -707,7 +709,7 @@ cdef class IDLBridge:
         :return: An IDLProcedure object.
         """
 
-        return IDLProcedure(name, idl_bridge=self)
+        return IDLProcedure(name, return_arguments, idl_bridge=self)
 
     cdef inline str _string_idl_to_py(self, IDL_STRING string):
         """
@@ -800,12 +802,9 @@ cdef class IDLBridge:
             idl_dimensions[index] = numpy_dimensions[dimension_count - (index + 1)]
 
 
-# TODO: NEED TO PASS ARGUMENTS BACK TO PYTHON!!!!!!! add option to init that when set returns arguements packed in a tuple with return value at the start
-# TODO: add return_arguments boolean option
-
 class _IDLCallable:
 
-    def __init__(self, name, idl_bridge=IDLBridge(), return_arguments=False):
+    def __init__(self, name, return_arguments=None, idl_bridge=IDLBridge()):
 
         self.name = name
         self._idl = idl_bridge
@@ -848,6 +847,18 @@ class _IDLCallable:
         # build and return keyword command string fragment
         return ", ".join(keyword_strings)
 
+    def _process_return_arguments(self, arguments):
+
+        return_arguments = []
+
+        if self._return_arguments:
+            max_args = len(arguments)
+            for index in self._return_arguments:
+                if index < max_args:
+                    return_arguments.append(self._idl.get("_idlbridge_arg{index}".format(index=index)))
+
+        return return_arguments
+
 
 class IDLFunction(_IDLCallable):
 
@@ -871,14 +882,19 @@ class IDLFunction(_IDLCallable):
 
         # execute command and obtain returned data
         self._idl.execute(command)
-        data = self._idl.get(return_variable)
+        return_value = self._idl.get(return_variable)
+
+        # if modified arguments need to be returned, obtain and pack into a tuple with the return value
+        return_arguments = self._process_return_arguments(arguments)
+        if return_arguments:
+            return_value = tuple([return_value] + return_arguments)
 
         # clean up
         for variable in temporary_variables:
             self._idl.delete(variable)
         self._idl.delete(return_variable)
 
-        return data
+        return return_value
 
 
 class IDLProcedure(_IDLCallable):
@@ -909,8 +925,16 @@ class IDLProcedure(_IDLCallable):
         # execute command
         self._idl.execute(command)
 
+        # if modified arguments need to be returned, obtain and pack into a tuple
+        return_arguments = self._process_return_arguments(arguments)
+        if return_arguments:
+            return_value = tuple(return_arguments)
+        else:
+            return_value = None
+
         # clean up
         for variable in temporary_variables:
             self._idl.delete(variable)
 
+        return return_value
 

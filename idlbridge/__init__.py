@@ -70,8 +70,8 @@ def delete(variable):
     global __bridge__
     __bridge__.delete(variable)
 
-
-def export_function(name):
+# todo: update docstring
+def export_function(name, return_arguments=None):
     """
     Wraps an IDL function in an object that behaves like a Python function.
 
@@ -93,10 +93,10 @@ def export_function(name):
     """
 
     global __bridge__
-    return __bridge__.export_function(name)
+    return __bridge__.export_function(name, return_arguments)
 
-
-def export_procedure(name):
+# todo: update docstring
+def export_procedure(name, return_arguments=None):
     """
     Wraps an IDL procedure in an object that behaves like a Python function.
 
@@ -118,6 +118,6 @@ def export_procedure(name):
     """
 
     global __bridge__
-    return __bridge__.export_procedure(name)
+    return __bridge__.export_procedure(name, return_arguments)
 
 

@@ -1,7 +1,11 @@
 from unittest import TestCase
-import idlbridge as idl
+from os.path import join, dirname, abspath
 import numpy as np
+import idlbridge as idl
 
+# extend idl path to allow access to test functions
+test_function_path = join(dirname(abspath(__file__)), "idl_routines.pro")
+idl.execute(".compile {}".format(test_function_path))
 
 class TestIDLBridge(TestCase):
 
@@ -498,15 +502,84 @@ class TestIDLBridge(TestCase):
 
             idl.get("test_delete")
 
-    # TODO: figure out the best way to test
-    # def test_function(self):
-    #
-    #     pass
+    def test_function_basic_call(self):
 
-    # TODO: figure out the best way to test
-    # def test_procedure(self):
-    #
-    #     pass
+        idl_test_function = idl.export_function("idl_test_function")
+        self.assertEqual(999, idl_test_function(1, 2, 3, 4), "Calling function with basic arguments failed.")
+        self.assertEqual(100, idl_test_function(1, 2, 3, 4, key_a=True), "Calling function with keyword argument failed (1 of 2).")
+        self.assertEqual(5000, idl_test_function(1, 2, 3, 4, key_b=True), "Calling function with keyword argument failed (2 of 2).")
 
+    def test_function_partial_returned_arguments_no_keywords(self):
 
+        idl_test_function = idl.export_function("idl_test_function", return_arguments=[0, 2])
+        rtn, a, c = idl_test_function(1.5, 2.5, 3.5, 4.5)
+        self.assertEqual(a, 2.5, "Argument a was not correctly returned.")
+        self.assertEqual(c, 4.5, "Argument c was not correctly returned.")
+        self.assertEqual(rtn, 999, "The return value is incorrect.")
 
+    def test_function_partial_returned_arguments_with_keywords(self):
+
+        idl_test_function = idl.export_function("idl_test_function", return_arguments=[0, 2])
+        rtn, a, c = idl_test_function(1.5, 2.5, 3.5, 4.5, key_a=True)
+        self.assertEqual(a, 20, "Argument a was not correctly returned.")
+        self.assertEqual(c, 60, "Argument c was not correctly returned.")
+        self.assertEqual(rtn, 100, "The return value is incorrect.")
+
+    def test_function_full_returned_arguments_no_keywords(self):
+
+        idl_test_function = idl.export_function("idl_test_function", return_arguments=[0, 1, 2, 3])
+        rtn, a, b, c, d = idl_test_function(1.5, 2.5, 3.5, 4.5)
+        self.assertEqual(a, 2.5, "Argument a was not correctly returned.")
+        self.assertEqual(b, 3.5, "Argument b was not correctly returned.")
+        self.assertEqual(c, 4.5, "Argument c was not correctly returned.")
+        self.assertEqual(d, 0.0, "Argument d was not correctly returned.")
+        self.assertEqual(rtn, 999, "The return value is incorrect.")
+
+    def test_function_full_returned_arguments_with_keywords(self):
+
+        idl_test_function = idl.export_function("idl_test_function", return_arguments=[0, 1, 2, 3])
+        rtn, a, b, c, d = idl_test_function(1.5, 2.5, 3.5, 4.5, key_b=True)
+        self.assertEqual(a, 1000, "Argument a was not correctly returned.")
+        self.assertEqual(b, 2000, "Argument b was not correctly returned.")
+        self.assertEqual(c, 3000, "Argument c was not correctly returned.")
+        self.assertEqual(d, 4000, "Argument d was not correctly returned.")
+        self.assertEqual(rtn, 5000, "The return value is incorrect.")
+
+    def test_procedure_basic_call(self):
+
+        idl_test_procedure = idl.export_procedure("idl_test_procedure")
+        self.assertEqual(None, idl_test_procedure(1, 2, 3, 4), "Calling procedure with basic arguments failed.")
+        self.assertEqual(None, idl_test_procedure(1, 2, 3, 4, key_a=True), "Calling procedure with keyword argument failed (1 of 2).")
+        self.assertEqual(None, idl_test_procedure(1, 2, 3, 4, key_b=True), "Calling procedure with keyword argument failed (2 of 2).")
+
+    def test_procedure_partial_returned_arguments_no_keywords(self):
+
+        idl_test_procedure = idl.export_procedure("idl_test_procedure", return_arguments=[0, 2])
+        a, c = idl_test_procedure(1.5, 2.5, 3.5, 4.5)
+        self.assertEqual(a, 2.5, "Argument a was not correctly returned.")
+        self.assertEqual(c, 4.5, "Argument c was not correctly returned.")
+
+    def test_procedure_partial_returned_arguments_with_keywords(self):
+
+        idl_test_procedure = idl.export_procedure("idl_test_procedure", return_arguments=[0, 2])
+        a, c = idl_test_procedure(1.5, 2.5, 3.5, 4.5, key_a=True)
+        self.assertEqual(a, 40, "Argument a was not correctly returned.")
+        self.assertEqual(c, 80, "Argument c was not correctly returned.")
+
+    def test_procedure_full_returned_arguments_no_keywords(self):
+
+        idl_test_procedure = idl.export_procedure("idl_test_procedure", return_arguments=[0, 1, 2, 3])
+        a, b, c, d = idl_test_procedure(1.5, 2.5, 3.5, 4.5)
+        self.assertEqual(a, 2.5, "Argument a was not correctly returned.")
+        self.assertEqual(b, 3.5, "Argument b was not correctly returned.")
+        self.assertEqual(c, 4.5, "Argument c was not correctly returned.")
+        self.assertEqual(d, 0.0, "Argument d was not correctly returned.")
+
+    def test_procedure_full_returned_arguments_with_keywords(self):
+
+        idl_test_procedure = idl.export_procedure("idl_test_procedure", return_arguments=[0, 1, 2, 3])
+        a, b, c, d = idl_test_procedure(1.5, 2.5, 3.5, 4.5, key_b=True)
+        self.assertEqual(a, 2000, "Argument a was not correctly returned.")
+        self.assertEqual(b, 3000, "Argument b was not correctly returned.")
+        self.assertEqual(c, 4000, "Argument c was not correctly returned.")
+        self.assertEqual(d, 0.0, "Argument d was not correctly returned.")
