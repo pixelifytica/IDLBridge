@@ -919,10 +919,9 @@ class _IDLCallable:
         if self._return_arguments:
             max_args = len(arguments)
             for index in self._return_arguments:
+                # only return arguments that were passed in by the user to the function
                 if index < max_args:
                     return_arguments.append(self._idl.get("_idlbridge_arg{index}".format(index=index)))
-                else:
-                    return_arguments.append(None)
 
         return return_arguments
 
