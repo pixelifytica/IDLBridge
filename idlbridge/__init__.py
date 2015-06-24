@@ -112,13 +112,13 @@ def export_function(name, return_arguments=None):
         v, a, d = my_func(a, b, c, d, e)
 
     If any arguments specified for return are not used due to being optional
-    arguments, the value of any unused arguments will be set to None.
+    arguments, the unset arguments will not be returned.
 
-    For example, if:
+    For example:
 
-        v, a, d = my_func(a, b)
+        v, a = my_func(a, b)
 
-    then d would be set to None.
+    Here argument d is not set, so it is not returned.
 
     :param name: A string specifying the name of the IDL function to wrap.
     :param return_arguments: A list object containing the index of
@@ -170,13 +170,13 @@ def export_procedure(name, return_arguments=None):
         a, d = my_pro(a, b, c, d, e)
 
     If any arguments specified for return are not used due to being optional
-    arguments, the value of any unused arguments will be set to None.
+    arguments, the unset arguments will not be returned.
 
-    For example, if:
+    For example:
 
-        a, d = my_pro(a, b)
+        a = my_pro(a, b)
 
-    then d would be set to None.
+    Here argument d is not set, so it is not returned.
 
     :param None: A string specifying the name of the IDL procedure to wrap.
     :param return_arguments: A list object containing the index of
