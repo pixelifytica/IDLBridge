@@ -1,3 +1,20 @@
+# Copyright 2016 United Kingdom Atomic Energy Authority (UKAEA)
+#
+# This file is part of IDLBridge.
+#
+# IDLBridge is free software: you can redistribute it and/or modify it under
+# the terms of the Lesser GNU General Public License as published by the Free
+# Software Foundation, either version 3 of the License, or (at your option)
+# any later version.
+#
+# IDLBridge is distributed in the hope that it will be useful, but WITHOUT ANY
+# WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR
+# A PARTICULAR PURPOSE. See the Lesser GNU General Public License for more
+# details.
+#
+# You should have received a copy of the Lesser GNU General Public License
+# along with IDLBridge. If not, see <http://www.gnu.org/licenses/>.
+
 from distutils.core import setup
 from distutils.extension import Extension
 from Cython.Build import cythonize
@@ -67,20 +84,20 @@ setup(
     version=__version__,
     description="An IDL wrapper for Python",
     author='Dr. Alex Meakins',
-    author_email='alex.meakins@ccfe.ac.uk',
-    license="Copyright CCFE",
+    author_email='alex.meakins@ukaea.uk',
+    license="LGPLv3",
     classifiers=[
-        "Development Status :: 4 - Beta",
+        "Development Status :: 5 - Production/Stable",
         "Intended Audience :: Science/Research",
-#        "License :: OSI Approved :: BSD License",
+        "License :: OSI Approved :: GNU Lesser General Public License v3 or later (LGPLv3+)",
         "Programming Language :: Python :: 3",
         "Programming Language :: Cython",
         "Programming Language :: Python :: Implementation :: CPython",
         "Operating System :: POSIX :: Linux",
         "Topic :: Scientific/Engineering"
     ],
-    # setup_requires="cython > =0.19",
-    # install_requires="cython > =0.19",
+    setup_requires=["cython>=0.19"],
+    install_requires=["cython>=0.19"],
     packages=["idlbridge"],
     ext_modules=cythonize(extensions, force=force, compiler_directives=directives)
 )
