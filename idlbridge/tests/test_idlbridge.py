@@ -26,13 +26,20 @@ idl.execute(".compile {}".format(test_function_path))
 
 class TestIDLBridge(TestCase):
 
-    def assertArrayEqual(self, first, second, message):
+    def assertArrayEqual(self, first, second, message, ignore_endianness=False):
 
         # check data types are the same
-        self.assertEqual(first.dtype, second.dtype, message + " Data types are different.")
+        if ignore_endianness:
+            self.assertEqual(
+                first.dtype.newbyteorder('='),
+                second.dtype.newbyteorder('='),
+                message + " Data types are different"
+            )
+        else:
+            self.assertEqual(first.dtype, second.dtype, message + " Data types are different.")
 
         # check all elements are equal
-        self.assertTrue((first == second).any(), message + " Elements are not the same.")
+        self.assertTrue((first == second).all(), message + " Elements are not the same.")
 
     def test_execute(self):
 
@@ -396,11 +403,25 @@ class TestIDLBridge(TestCase):
         idl.put("test_put_array_1d_int16", v)
         self.assertArrayEqual(v, idl.get("test_put_array_1d_int16"), "Failed to put int16 array.")
 
+    def test_put_array_int16_be(self):
+
+        v = np.array([1, 2, 3, 4, 5], dtype='>i2')
+        idl.put("test_put_array_1d_int16_be", v)
+        self.assertArrayEqual(v, idl.get("test_put_array_1d_int16_be"),
+                              "Failed to put big-endian int16 array.", True)
+
     def test_put_array_uint16(self):
 
         v = np.array([1, 2, 3, 4, 5], dtype=np.uint16)
         idl.put("test_put_array_1d_uint16", v)
         self.assertArrayEqual(v, idl.get("test_put_array_1d_uint16"), "Failed to put uint16 array.")
+
+    def test_put_array_uint16_be(self):
+
+        v = np.array([1, 2, 3, 4, 5], dtype='>u2')
+        idl.put("test_put_array_1d_uint16_be", v)
+        self.assertArrayEqual(v, idl.get("test_put_array_1d_uint16_be"),
+                              "Failed to put big-endian uint16 array.", True)
 
     def test_put_array_int32(self):
 
@@ -408,11 +429,25 @@ class TestIDLBridge(TestCase):
         idl.put("test_put_array_1d_int32", v)
         self.assertArrayEqual(v, idl.get("test_put_array_1d_int32"), "Failed to put int32 array.")
 
+    def test_put_array_int32_be(self):
+
+        v = np.array([1, 2, 3, 4, 5], dtype='>i4')
+        idl.put("test_put_array_1d_int32_be", v)
+        self.assertArrayEqual(v, idl.get("test_put_array_1d_int32_be"),
+                              "Failed to put big-endian int32 array.", True)
+
     def test_put_array_uint32(self):
 
         v = np.array([1, 2, 3, 4, 5], dtype=np.uint32)
         idl.put("test_put_array_1d_uint32", v)
         self.assertArrayEqual(v, idl.get("test_put_array_1d_uint32"), "Failed to put uint32 array.")
+
+    def test_put_array_uint32_be(self):
+
+        v = np.array([1, 2, 3, 4, 5], dtype='>u4')
+        idl.put("test_put_array_1d_uint32_be", v)
+        self.assertArrayEqual(v, idl.get("test_put_array_1d_uint32_be"),
+                              "Failed to put big-endian uint32 array.", True)
 
     def test_put_array_int64(self):
 
@@ -420,11 +455,25 @@ class TestIDLBridge(TestCase):
         idl.put("test_put_array_1d_int64", v)
         self.assertArrayEqual(v, idl.get("test_put_array_1d_int64"), "Failed to put int64 array.")
 
+    def test_put_array_int64_be(self):
+
+        v = np.array([1, 2, 3, 4, 5], dtype='>i8')
+        idl.put("test_put_array_1d_int64_be", v)
+        self.assertArrayEqual(v, idl.get("test_put_array_1d_int64_be"),
+                              "Failed to put big-endian int64 array.", True)
+
     def test_put_array_uint64(self):
 
         v = np.array([1, 2, 3, 4, 5], dtype=np.uint64)
         idl.put("test_put_array_1d_uint64", v)
         self.assertArrayEqual(v, idl.get("test_put_array_1d_uint64"), "Failed to put uint64 array.")
+
+    def test_put_array_uint64_be(self):
+
+        v = np.array([1, 2, 3, 4, 5], dtype='>u8')
+        idl.put("test_put_array_1d_uint64_be", v)
+        self.assertArrayEqual(v, idl.get("test_put_array_1d_uint64_be"),
+                              "Failed to put big-endian uint64 array.", True)
 
     def test_put_array_float32(self):
 
@@ -432,11 +481,25 @@ class TestIDLBridge(TestCase):
         idl.put("test_put_array_1d_float32", v)
         self.assertArrayEqual(v, idl.get("test_put_array_1d_float32"), "Failed to put float32 array.")
 
+    def test_put_array_float32_be(self):
+
+        v = np.array([1, 2, 3, 4, 5], dtype='>f4')
+        idl.put("test_put_array_1d_float32_be", v)
+        self.assertArrayEqual(v, idl.get("test_put_array_1d_float32_be"),
+                              "Failed to put big-endian float32 array.", True)
+
     def test_put_array_float64(self):
 
         v = np.array([1, 2, 3, 4, 5], dtype=np.float64)
         idl.put("test_put_array_1d_float64", v)
         self.assertArrayEqual(v, idl.get("test_put_array_1d_float64"), "Failed to put float64 array.")
+
+    def test_put_array_float64_be(self):
+
+        v = np.array([1, 2, 3, 4, 5], dtype='>f8')
+        idl.put("test_put_array_1d_float64_be", v)
+        self.assertArrayEqual(v, idl.get("test_put_array_1d_float64_be"),
+                              "Failed to put big-endian float64 array.", True)
 
     def test_put_array_complex64(self):
 
@@ -444,11 +507,25 @@ class TestIDLBridge(TestCase):
         idl.put("test_put_array_1d_complex64", v)
         self.assertArrayEqual(v, idl.get("test_put_array_1d_complex64"), "Failed to put complex64 array.")
 
+    def test_put_array_complex64_be(self):
+
+        v = np.array([1, 2, 3, 4, 5], dtype='>c8')
+        idl.put("test_put_array_1d_complex64_be", v)
+        self.assertArrayEqual(v, idl.get("test_put_array_1d_complex64_be"),
+                              "Failed to put big-endian complex64 array.", True)
+
     def test_put_array_complex128(self):
 
         v = np.array([1+6j, 2+7j, 3+8j, 4+9j, 5+10j], dtype=np.complex128)
         idl.put("test_put_array_1d_complex128", v)
         self.assertArrayEqual(v, idl.get("test_put_array_1d_complex128"), "Failed to put complex128 array.")
+
+    def test_put_array_complex128_be(self):
+
+        v = np.array([1, 2, 3, 4, 5], dtype='>c16')
+        idl.put("test_put_array_1d_complex128_be", v)
+        self.assertArrayEqual(v, idl.get("test_put_array_1d_complex128_be"),
+                              "Failed to put big-endian complex128 array.", True)
 
     def test_put_array_string(self):
 
@@ -486,6 +563,25 @@ class TestIDLBridge(TestCase):
 
         self.assertArrayEqual(v["a"], idl.get("test_put_structure_array")["a"], "Failed to put array structure (scalar array).")
         self.assertArrayEqual(v["b"], idl.get("test_put_structure_array")["b"], "Failed to put array structure (string array).")
+
+    def test_put_structure_array_be(self):
+
+        v = {"a": np.array([1, 2, 3, 4, 5], dtype='>i2'), "b": np.array(["alpha", "beta"])}
+
+        idl.put("test_put_structure_array_be", v)
+
+        self.assertArrayEqual(
+            v["a"],
+            idl.get("test_put_structure_array_be")["a"],
+            "Failed to put big-endian array structure (scalar array).",
+            True
+        )
+        self.assertArrayEqual(
+            v["b"],
+            idl.get("test_put_structure_array_be")["b"],
+            "Failed to put array structure (string array).",
+            True
+        )
 
     def test_put_structure_nested(self):
 
