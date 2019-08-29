@@ -25,7 +25,7 @@ import os.path as path
 import platform
 
 # set the code version
-__version__ = "1.1.0"
+__version__ = "1.1.1"
 
 force = False
 profile = False
