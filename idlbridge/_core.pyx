@@ -546,6 +546,9 @@ cdef class IDLBridge:
 
         else:
 
+            # Ensure data is in native byte format
+            if not data.dtype.isnative:
+                data = data.byteswap()
             # obtain IDL type
             type = self._type_numpy_to_idl(np.PyArray_TYPE(data))
             array_data = <void *> IDL_MakeTempArray(type, num_dimensions, dimensions, IDL_ARR_INI_NOP, &temp_vptr)
