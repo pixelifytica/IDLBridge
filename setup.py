@@ -80,24 +80,6 @@ else:
     directives = {}
 
 setup(
-    name="idlbridge",
-    version=__version__,
-    description="An IDL wrapper for Python",
-    author='Dr. Alex Meakins',
-    author_email='alex.meakins@ukaea.uk',
-    license="LGPLv3",
-    classifiers=[
-        "Development Status :: 5 - Production/Stable",
-        "Intended Audience :: Science/Research",
-        "License :: OSI Approved :: GNU Lesser General Public License v3 or later (LGPLv3+)",
-        "Programming Language :: Python :: 3",
-        "Programming Language :: Cython",
-        "Programming Language :: Python :: Implementation :: CPython",
-        "Operating System :: POSIX :: Linux",
-        "Topic :: Scientific/Engineering"
-    ],
-#     setup_requires=["cython>=0.19"],
-#     install_requires=["cython>=0.19"],
     packages=["idlbridge"],
     ext_modules=cythonize(extensions, force=force, compiler_directives=directives)
 )
